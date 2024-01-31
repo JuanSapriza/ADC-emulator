@@ -2,12 +2,12 @@ import numpy as np
 import pickle
 
 class Timeseries:
-    def __init__(self, name):
-        self.name = name
-        self.data = []
-        self.time = []
-        self.dx = []
-        self.f_Hz = 0
+    def __init__(self, name, data = [], time = [], f_Hz = 0, dx = [] ):
+        self.name   = name
+        self.data   = data
+        self.time   = time
+        self.f_Hz   = f_Hz
+        self.dx     = dx
 
     def __str__(self):
         return self.name

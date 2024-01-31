@@ -3,6 +3,25 @@ from scipy import interpolate
 import numpy as np
 from timeseries import Timeseries
 
+
+class Process:
+    def __init__(self, process, *args):
+        self.process = process
+        self.args = args
+
+class Signal:
+    def __init__(self, series: Timeseries):
+        self.series     = series
+        self.processes  = []
+        self.steps      = [series]
+
+    def add_process(self, process, *args ):
+        self.processes.append(Process(process, *args))
+
+    def apply_process(self, process, *args):
+        self.steps.append(process(self.series,*args))
+
+
 def pas(series, e):
     '''
     Implement a PAS
@@ -101,12 +120,12 @@ def needle(series, win):
 
 
 
-def mean_sub(series, window):
+def mean_sub(series, win):
     o = Timeseries(series.name + " Mean")
     o.f_Hz = series.f_Hz
-    for i in range(window,len(series.time)):
+    for i in range(win,len(series.time)):
         ### print('',end='\r')
-        m = np.average(series.data[i-window:i])
+        m = np.average(series.data[i-win:i])
         o.data.append( series.data[i] - m )
         o.time.append( series.time[i] )
         ### print(i, end='')
