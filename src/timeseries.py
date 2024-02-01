@@ -2,12 +2,24 @@ import numpy as np
 import pickle
 
 class Timeseries:
-    def __init__(self, name, data = [], time = [], f_Hz = 0, dx = [] ):
+    def __init__(self,
+                 name,
+                 data = None,
+                 time = None,
+                 f_Hz = 0,
+                 length_s = 0,
+                 dx = None ):
         self.name   = name
-        self.data   = data
-        self.time   = time
+        self.data   = data if data is not None else []
+
+        if time is None and length_s != 0:
+            T_s = length_s/len(data)
+            f_Hz = 1/T_s
+            time = np.arange(0,length_s,T_s)
+        self.time   = time if time is not None else []
+
         self.f_Hz   = f_Hz
-        self.dx     = dx
+        self.dx     = dx if dx is not None else []
 
     def __str__(self):
         return self.name
