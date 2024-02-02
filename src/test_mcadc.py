@@ -7,14 +7,17 @@ from copy import deepcopy as cp
 
 from processes import *
 
+CHANNELS = 10
 processes = []
+# figure, axs = plt.subplots(CHANNELS+1, 1, figsize=(10, 8))
 
-def add_to_plot(series, row, alpha=1):
+def add_to_plot(series, row, col, alpha=1):
+    ax = plt.subplot2grid((CHANNELS, 2), (row, col), rowspan = 1 if col == 0 else CHANNELS )
+    ax.set_title(series.name)
     print(f'Samples \t {len(series.time)} \t {series}')
-    axs[row].plot(series.time, series.data, alpha = alpha )
+    ax.scatter(series.time, series.data, alpha = alpha, s=2  )
     processes.append(series)
     series.dump()
-
 
 
 
@@ -26,8 +29,6 @@ Time,FP1,FP2,C3,C4,O1,O2,SPR1,SPR2,ECG1,ECG2
 
 with open('../in/multimodal/S1_ADAS1.txt') as f: y = f.readlines()
 titles = y[0].strip().split(',')
-print(titles)
-print(len(titles))
 y = y[1:]
 data = np.asarray([[float(f) for f in l.split(',')] for l in y])
 
@@ -48,13 +49,13 @@ sample_max = int(length_s/T_s)
 for c in range(len(channels)): channels[c] = channels[c][:sample_max]
 
 
-figure, axs = plt.subplots(len(channels), 1, figsize=(10, 8))
 
 adc_channels = []
-for ch, ch_idx in zip(channels, range(len(channels))):
+for ch, ch_idx in zip(channels, range(CHANNELS)):
+
     adc_channels.append( ADC( name      = f"{titles[ch_idx]}",
                             units       = "uV",
-                            f_Hz        = f_Hz,
+                            f_sample_Hz = f_Hz,
                             ampl_bits   = 14,
                             dynRange    = [-1500, 1500],
                             series      =  Timeseries('ch1',
@@ -63,14 +64,17 @@ for ch, ch_idx in zip(channels, range(len(channels))):
                             )
                         )
 
-    add_to_plot(adc_channels[ch_idx].conversion, ch_idx)
-
-
-# plt.show()
-
-mcadc = mcADC("MultiChannel ADC", adc_channels )
+    add_to_plot(adc_channels[ch_idx].conversion, ch_idx, 0)
 
 
 
+mcadc = mcADC("MultiChannel ADC", adc_channels[:CHANNELS] )
 
-print("pepe")
+mcadc.TDM()
+
+add_to_plot(mcadc.conversion, 0, 1)
+
+plt.subplots_adjust(hspace=2)
+plt.tight_layout()
+plt.show()
+

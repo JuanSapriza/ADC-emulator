@@ -6,28 +6,28 @@ from processes import *
 
 class ADC:
     def __init__( self,
-                  name       : str                   = "myVirtualADC",
-                  units      : str                   = "Arbitrary units",
-                  f_Hz       : float                 = 0,
-                  dynRange   : list[float, float]    = [0,0],
-                  bandwidth  : list[float, float]    = [0,0],
-                  noise_dev  : float                 = 0,
-                  SNR_dB     : float                 = 100,
-                  THD_pc     : float                 = 0,
-                  epc_J      : float                 = 0,
-                  tpc_s      : float                 = 0,
-                  ampl_bits  : int                   = 0,
-                  time_bits  : int                   = 0,
-                  buf_smpl   : int                   = 1,
-                  channels   : int                   = 1,
-                  diff       : bool                  = False,
-                  interrupt  : int                   = -1,
+                  name          : str                   = "myVirtualADC",
+                  units         : str                   = "Arbitrary units",
+                  f_sample_Hz   : float                 = 0,
+                  dynRange      : list[float, float]    = [0,0],
+                  bandwidth     : list[float, float]    = [0,0],
+                  noise_dev     : float                 = 0,
+                  SNR_dB        : float                 = 100,
+                  THD_pc        : float                 = 0,
+                  epc_J         : float                 = 0,
+                  tpc_s         : float                 = 0,
+                  ampl_bits     : int                   = 0,
+                  time_bits     : int                   = 0,
+                  buf_smpl      : int                   = 1,
+                  channels      : int                   = 1,
+                  diff          : bool                  = False,
+                  interrupt     : int                   = -1,
+                  series        : Timeseries           = None,
                 #   levels     : callable[[None],list] = None,
                 #   in_custom  : callable[[Timeseries], Timeseries] = None,
                 #   out_custom : callable[[Timeseries], Timeseries] = None,
                 #   time_custom: callable[[Timeseries], Timeseries] = None,
                 #   linear_range : list[float, float] = [0,0],
-                  series     : Timeseries           = None,
                   ):
         """
         Create a virtual ADC with specified characteristics.
@@ -35,7 +35,7 @@ class ADC:
         Parameters:
         - name (str): Name of the virtual ADC to identify it. Default "myVirtualADC".
         - units (str): Units in which the data is represented. Default "Arbitrary units".
-        - f_Hz (float): Sampling frequency of the ADC. If larger than the input frequency of the signal, this will be oversampled. Default 0 for no fixed sampling rate.
+        - f_sample_Hz (float): Sampling frequency of the ADC. If larger than the input frequency of the signal, this will be oversampled. Default 0 for no fixed sampling rate.
         - dynRange (List[float,float]): Dynamic Range of the ADC (in the input units), lower and upper bounds. Default [0,0] for no limits.
         - bandwidth (List[float,float]): Frequency bounds of a band-pass filter at the input of the ADC. Default [0,0] for no filter.
         - noise_dev (float): Deviation of a Gaussian noise at the input. Default 0 for no noise.
@@ -56,7 +56,7 @@ class ADC:
         """
         self.name           = name
         self.units          = units
-        self.f_Hz           = f_Hz
+        self.f_sample_Hz    = f_sample_Hz
         self.dynRange       = dynRange
         self.bandwidth      = bandwidth
         self.noise_dev      = noise_dev
@@ -83,15 +83,16 @@ class ADC:
 
     def feed( self, series: Timeseries ):
 
-        series = resample( series, timestamps = None, f_Hz = self.f_Hz)
+        series = resample( series, timestamps = None, f_Hz = self.f_sample_Hz)
         series = clip( series, self.dynRange )
         series = quantize( series, self.ampl_bits, np.ceil)
 
         convert = series
         self.conversion = Timeseries("Conversion " + self.name,
-                                    convert.data,
-                                    convert.time,
-                                    convert.f_Hz )
+                                    data = convert.data,
+                                    time = convert.time,
+                                    f_Hz = convert.f_Hz )
+
 
 
 def resample( series: Timeseries, timestamps = None, f_Hz = 0  ):
@@ -104,6 +105,7 @@ def resample( series: Timeseries, timestamps = None, f_Hz = 0  ):
     o = Timeseries("resampled")
     o.data = resampled_data
     o.time = timestamps
+    o.f_Hz = f_Hz
     return o
 
 
@@ -147,13 +149,19 @@ class mcADC:
         self.conversion = None
 
     def TDM(self):
-        f_tdm_Hz    = self.channels[0].f_Hz * len(self.channels)
+        s           = self.channels[0].conversion
+        f_tdm_Hz    = s.f_Hz * len(self.channels)
         T_tdm_s     = 1/f_tdm_Hz
-        length      = len(self.channels[0])
-        time        = np.arange(0,length,T_tdm_s)
+        length_s    = len(s.data)*(1/s.f_Hz)
+        time        = np.arange(0,length_s,T_tdm_s)
         data        = []
-        for i in range(length):
-            for c in self.channels:
-                # ADD CODIFICATION
-                data.append(data[i])
-        self.conversion = Timeseries( name = f"TDM {len(self.channels)} channels"
+        for i in range(len(s.time)):
+            for c, c_idx in zip(self.channels, range(len(self.channels))):
+                # CODIFICATION = 0bCC...CCDD...DD where C represent bits for the channel index and D bits for data in the resolution of the ADC.
+                data.append(c.conversion.data[i] + c_idx*(2**c.ampl_bits))
+        self.conversion = Timeseries( name = f"TDM {len(self.channels)} channels",
+                                     data = data,
+                                     time = time,
+                                     f_Hz = f_tdm_Hz,
+                                    )
+
