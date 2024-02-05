@@ -17,7 +17,6 @@ def add_to_plot(series, row, col, alpha=1):
     print(f'Samples \t {len(series.time)} \t {series}')
     ax.scatter(series.time, series.data, alpha = alpha, s=2  )
     processes.append(series)
-    series.dump()
 
 
 
@@ -53,18 +52,18 @@ for c in range(len(channels)): channels[c] = channels[c][:sample_max]
 adc_channels = []
 for ch, ch_idx in zip(channels, range(CHANNELS)):
 
-    adc_channels.append( ADC( name      = f"{titles[ch_idx]}",
+    adc_channels.append( ADC( name      = f"ADC for{titles[ch_idx]}",
                             units       = "uV",
                             f_sample_Hz = f_Hz,
                             ampl_bits   = 14,
                             dynRange    = [-1500, 1500],
-                            series      =  Timeseries('ch1',
-                                                      channels[ch_idx],
+                            series      =  Timeseries(f"{titles[ch_idx]}",
+                                                      ch,
                                                       length_s = length_s)
                             )
                         )
 
-    add_to_plot(adc_channels[ch_idx].conversion, ch_idx, 0)
+    add_to_plot(adc_channels[ch_idx].conversion, CHANNELS - ch_idx -1, 0)
 
 
 

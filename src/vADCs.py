@@ -1,7 +1,8 @@
 
 import numpy as np
-from timeseries import *
-from processes import *
+
+from src.timeseries import *
+from src.processes import *
 
 
 class ADC:
@@ -86,7 +87,6 @@ class ADC:
         series = resample( series, timestamps = None, f_Hz = self.f_sample_Hz)
         series = clip( series, self.dynRange )
         series = quantize( series, self.ampl_bits, np.ceil)
-
         convert = series
         self.conversion = Timeseries("Conversion " + self.name,
                                     data = convert.data,
@@ -134,7 +134,7 @@ def quantize( series: Timeseries, bits: int, approximation: callable ):
     max_amplitude = max(abs(np.asarray(series.data)))
     min_amplitude_step = max_amplitude/ ( (2**bits)/2 -1)
     for s, i  in zip(series.data, range(len(series.data))):
-        d = approximation(s/min_amplitude_step)*min_amplitude_step
+        d = approximation(s/min_amplitude_step)#*min_amplitude_step # Uncomment this to keep the original dimensions. Will not work properly with multichannel mode
         o.data.append(d)
     return o
 
@@ -159,6 +159,7 @@ class mcADC:
             for c, c_idx in zip(self.channels, range(len(self.channels))):
                 # CODIFICATION = 0bCC...CCDD...DD where C represent bits for the channel index and D bits for data in the resolution of the ADC.
                 data.append(c.conversion.data[i] + c_idx*(2**c.ampl_bits))
+
         self.conversion = Timeseries( name = f"TDM {len(self.channels)} channels",
                                      data = data,
                                      time = time,

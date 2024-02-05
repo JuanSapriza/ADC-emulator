@@ -13,7 +13,6 @@ def add_to_plot(series, alpha=1):
     print(f'Samples \t {len(series.time)} \t {series}')
     ax.plot(series.time, series.data, alpha = alpha )
     processes.append(series)
-    series.dump()
 
 figure, ax = plt.subplots(figsize=(10, 8))
 
