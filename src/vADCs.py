@@ -24,11 +24,11 @@ class ADC:
                   diff          : bool                  = False,
                   interrupt     : int                   = -1,
                   series        : Timeseries           = None,
-                #   levels     : callable[[None],list] = None,
-                #   in_custom  : callable[[Timeseries], Timeseries] = None,
-                #   out_custom : callable[[Timeseries], Timeseries] = None,
-                #   time_custom: callable[[Timeseries], Timeseries] = None,
-                #   linear_range : list[float, float] = [0,0],
+                #   levels        : callable[[None],list] = None,
+                #   in_custom     : callable[[Timeseries], Timeseries] = None,
+                #   out_custom    : callable[[Timeseries], Timeseries] = None,
+                #   time_custom   : callable[[Timeseries], Timeseries] = None,
+                  linear_range  : list[float, float] = [0,0],
                   ):
         """
         Create a virtual ADC with specified characteristics.
@@ -59,24 +59,25 @@ class ADC:
         self.units          = units
         self.f_sample_Hz    = f_sample_Hz
         self.dynRange       = dynRange
-        self.bandwidth      = bandwidth
-        self.noise_dev      = noise_dev
-        self.SNR_dB         = SNR_dB
-        self.THD_pc         = THD_pc
-        self.epc_J          = epc_J
-        self.tpc_s          = tpc_s
+        self.bandwidth      = bandwidth     # Not yet used
+        self.noise_dev      = noise_dev     # Not yet used
+        self.SNR_dB         = SNR_dB        # Not yet used
+        self.THD_pc         = THD_pc        # Not yet used
+        self.epc_J          = epc_J         # Not yet used
+        self.tpc_s          = tpc_s         # Not yet used
         self.ampl_bits      = ampl_bits
-        self.time_bits      = time_bits
-        self.buf_smpl       = buf_smpl
+        self.time_bits      = time_bits     # Not yet used
+        self.buf_smpl       = buf_smpl      # Not yet used
         self.channels       = channels
-        self.diff           = diff
-        self.interrupt      = interrupt
+        self.diff           = diff          # Not yet used
+        self.interrupt      = interrupt     # Not yet used
         # self.levels         = levels
         # self.in_custom      = in_custom
         # self.out_custom     = out_custom
         # self.time_custom    = time_custom
-        self.latency_s   = 0
-        self.energy_J    = 0
+        self.linear_range   = linear_range  # Not yet used
+        self.latency_s   = 0                # Not yet used
+        self.energy_J    = 0                # Not yet used
         self.conversion  = None
         if series != None: self.feed(series)
 
@@ -84,9 +85,9 @@ class ADC:
 
     def feed( self, series: Timeseries ):
 
-        series = resample( series, timestamps = None, f_Hz = self.f_sample_Hz)
-        series = clip( series, self.dynRange )
-        series = quantize( series, self.ampl_bits, np.ceil)
+        series = self.resample( series, timestamps = None, f_Hz = self.f_sample_Hz)
+        series = self.clip( series, self.dynRange )
+        series = self.quantize( series, np.ceil)
         convert = series
         self.conversion = Timeseries("Conversion " + self.name,
                                     data = convert.data,
@@ -95,49 +96,57 @@ class ADC:
 
 
 
-def resample( series: Timeseries, timestamps = None, f_Hz = 0  ):
-    if timestamps == None:
-        if f_Hz == 0:
-            raise   ValueError("Either timestamps or f_Hz should be provided.")
-        timestamps = np.arange(series.time[0], series.time[-1], 1 / f_Hz)
+    def resample(self, series: Timeseries, timestamps = None, f_Hz = 0  ):
+        if timestamps == None:
+            if f_Hz == 0:
+                raise   ValueError("Either timestamps or f_Hz should be provided.")
+            timestamps = np.arange(series.time[0], series.time[-1], 1 / f_Hz)
 
-    resampled_data = np.interp(timestamps, series.time, series.data)
-    o = Timeseries("resampled")
-    o.data = resampled_data
-    o.time = timestamps
-    o.f_Hz = f_Hz
-    return o
-
-
-def clip( series: Timeseries, dynRange: list[float, float] = [0,0] ):
-    if dynRange[0] >= dynRange[1]:
-        raise ValueError("The Dynamic Range should be defined as [Lower bound, Upper bound] and these should be different.")
-
-    o = Timeseries(series.name + f" Clipped({dynRange[0]},{dynRange[1]})")
-    o.time = series.time
-    o.f_Hz = series.f_Hz
-    for s in series.data:
-        d = s
-        if s < dynRange[0]:
-            d = dynRange[0]
-        elif s > dynRange[1]:
-            d = dynRange[1]
-        o.data.append(d)
-    return o
+        resampled_data = np.interp(timestamps, series.time, series.data)
+        o = Timeseries("resampled")
+        o.data = resampled_data
+        o.time = timestamps
+        o.f_Hz = f_Hz
+        return o
 
 
+    def clip(self, series: Timeseries, dynRange: list[float, float] = [0,0] ):
+        if dynRange[0] >= dynRange[1]:
+            raise ValueError("The Dynamic Range should be defined as [Lower bound, Upper bound] and these should be different.")
 
-def quantize( series: Timeseries, bits: int, approximation: callable ):
-    o = Timeseries(series.name + f" Q({bits})")
-    o.time = series.time
-    o.f_Hz = series.f_Hz
-    max_amplitude = max(abs(np.asarray(series.data)))
-    min_amplitude_step = max_amplitude/ ( (2**bits)/2 -1)
-    for s, i  in zip(series.data, range(len(series.data))):
-        d = approximation(s/min_amplitude_step)#*min_amplitude_step # Uncomment this to keep the original dimensions. Will not work properly with multichannel mode
-        o.data.append(d)
-    return o
+        o = Timeseries(series.name + f" Clipped({dynRange[0]},{dynRange[1]})")
+        o.time = series.time
+        o.f_Hz = series.f_Hz
+        for s in series.data:
+            d = s
+            if s < dynRange[0]:
+                d = dynRange[0]
+            elif s > dynRange[1]:
+                d = dynRange[1]
+            o.data.append(d)
+        return o
 
+
+
+# def quantize( series: Timeseries, bits: int, approximation: callable ):
+#     o = Timeseries(series.name + f" Q({bits})")
+#     o.time = series.time
+#     o.f_Hz = series.f_Hz
+#     max_amplitude = max(abs(np.asarray(series.data)))
+#     min_amplitude_step = max_amplitude/ ( (2**bits)/2 -1)
+#     for s, i  in zip(series.data, range(len(series.data))):
+#         d = approximation(s/min_amplitude_step)#*min_amplitude_step # Uncomment this to keep the original dimensions. Will not work properly with multichannel mode
+#         o.data.append(d)
+#     return o
+
+    def quantize(self, series: Timeseries, approximation: callable ):
+        o = Timeseries(series.name + f" Q({self.ampl_bits})")
+        o.time = series.time
+        o.f_Hz = series.f_Hz
+        for s, i  in zip(series.data, range(len(series.data))):
+            d = approximation( (2**self.ampl_bits)*( s + self.dynRange[1])/(self.dynRange[1]-self.dynRange[0]) )
+            o.data.append(d)
+        return o
 
 
 class mcADC:
@@ -158,7 +167,9 @@ class mcADC:
         for i in range(len(s.time)):
             for c, c_idx in zip(self.channels, range(len(self.channels))):
                 # CODIFICATION = 0bCC...CCDD...DD where C represent bits for the channel index and D bits for data in the resolution of the ADC.
-                data.append(c.conversion.data[i] + c_idx*(2**c.ampl_bits))
+                encoded = int(c.conversion.data[i]) + c_idx*(2**(c.ampl_bits))
+                data.append(encoded)
+                # print(f"{bin(encoded)[2:].zfill(c.ampl_bits+2)}")
 
         self.conversion = Timeseries( name = f"TDM {len(self.channels)} channels",
                                      data = data,

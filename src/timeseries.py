@@ -29,19 +29,24 @@ class Timeseries:
         with open( path+name+".timeseries", 'w+') as f:
             for t, d in zip(self.time, self.data): f.write(f"{t}, {d}\n")
 
-    def export_bin(self, path="../out/", name=""):
+    def export_bin(self, path="../out/", name="", bytes=4, bigendian = False):
         '''
         This will onlywork with synchronous timeseries, as it will discard time information.
         '''
         if name == "": name = self.name.replace(" ", "_")
         # Save the array to a binary file
-        d_32 = np.array(self.data).astype(np.int32)
+        if      bytes == 4: wordsize = np.int32
+        elif    bytes == 2: wordsize = np.int16
+        elif    bytes == 1: wordsize = np.int8
+        else:   raise ValueError("Invalid word size in bytes! Choose between 1, 2 and 4")
+        data = np.array(self.data).astype(wordsize)
         with  open( path+name+".bin", 'wb') as f:
-            d_32.byteswap(True).tofile(f)
+            data.byteswap(bigendian).tofile(f)
 
     def dump(self, path="../out/", name=""):
         if name == "": name = self.name.replace(" ", "_")
-        cop = self
+        from copy import deepcopy as cp
+        cop = cp(self)
         cop.data = np.asarray(cop.data)
         with open( path + name + ".pkl", 'wb') as f:
             pickle.dump( cop, f )
