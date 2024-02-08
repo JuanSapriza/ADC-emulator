@@ -1,8 +1,8 @@
 
 import numpy as np
 
-from src.timeseries import *
-from src.processes import *
+from timeseries import *
+from processes import *
 
 
 class ADC:

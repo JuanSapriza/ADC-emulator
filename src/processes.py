@@ -2,7 +2,7 @@ from scipy.signal import butter,filtfilt
 from scipy import interpolate
 import numpy as np
 
-from src.timeseries import Timeseries
+from timeseries import Timeseries
 
 
 class Process:
