@@ -41,7 +41,8 @@ class Timeseries:
         else:   raise ValueError("Invalid word size in bytes! Choose between 1, 2 and 4")
         data = np.array(self.data).astype(wordsize)
         with  open( path+name+".bin", 'wb') as f:
-            data.byteswap(bigendian).tofile(f)
+            if bigendian: data.byteswap(True).tofile(f)
+            else: data.tofile(f)
 
     def dump(self, path="../out/", name=""):
         if name == "": name = self.name.replace(" ", "_")
