@@ -126,20 +126,9 @@ class ADC:
             o.data.append(d)
         return o
 
-
-
-# def quantize( series: Timeseries, bits: int, approximation: callable ):
-#     o = Timeseries(series.name + f" Q({bits})")
-#     o.time = series.time
-#     o.f_Hz = series.f_Hz
-#     max_amplitude = max(abs(np.asarray(series.data)))
-#     min_amplitude_step = max_amplitude/ ( (2**bits)/2 -1)
-#     for s, i  in zip(series.data, range(len(series.data))):
-#         d = approximation(s/min_amplitude_step)#*min_amplitude_step # Uncomment this to keep the original dimensions. Will not work properly with multichannel mode
-#         o.data.append(d)
-#     return o
-
     def quantize(self, series: Timeseries, approximation: callable ):
+        if self.dynRange[0] >= self.dynRange[1]:
+            raise ValueError("The Dynamic Range should be defined as [Lower bound, Upper bound] and these should be different.")
         o = Timeseries(series.name + f" Q({self.ampl_bits})")
         o.time = series.time
         o.f_Hz = series.f_Hz
