@@ -1,3 +1,9 @@
+# Copyright 2024 EPFL
+# Solderpad Hardware License, Version 2.1, see LICENSE.md for details.
+# SPDX-License-Identifier: Apache-2.0 WITH SHL-2.1
+#
+# Author: Juan Sapriza - juan.sapriza@epfl.ch
+
 import numpy as np
 import pickle
 
@@ -29,18 +35,18 @@ class Timeseries:
         with open( path+name+".timeseries", 'w+') as f:
             for t, d in zip(self.time, self.data): f.write(f"{t}, {d}\n")
 
-    def export_bin(self, path="../out/", name="", bytes=4, bigendian = False):
+    def export_bin(self, outfile="../out/", bytes=4, bigendian = False):
         '''
         This will onlywork with synchronous timeseries, as it will discard time information.
         '''
-        if name == "": name = self.name.replace(" ", "_")
+        if outfile == "../out/": outfile += self.name.replace(" ", "_")
         # Save the array to a binary file
         if      bytes == 4: wordsize = np.int32
         elif    bytes == 2: wordsize = np.int16
         elif    bytes == 1: wordsize = np.int8
         else:   raise ValueError("Invalid word size in bytes! Choose between 1, 2 and 4")
         data = np.array(self.data).astype(wordsize)
-        with  open( path+name+".bin", 'wb') as f:
+        with  open( outfile + ".bin", 'wb') as f:
             if bigendian: data.byteswap(True).tofile(f)
             else: data.tofile(f)
 

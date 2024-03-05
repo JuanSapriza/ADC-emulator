@@ -1,3 +1,8 @@
+# Copyright 2024 EPFL
+# Solderpad Hardware License, Version 2.1, see LICENSE.md for details.
+# SPDX-License-Identifier: Apache-2.0 WITH SHL-2.1
+#
+# Author: Juan Sapriza - juan.sapriza@epfl.ch
 
 import numpy as np
 
@@ -141,7 +146,7 @@ class ADC:
 class mcADC:
     def __init__(self,
                  name: str = "MyMultiChannelADC",
-                 channels: list[ADC] = None):
+                 channels: list[ADC] = [] ):
         self.name       = name
         self.channels   = channels
         self.conversion = None

@@ -1,3 +1,9 @@
+# Copyright 2024 EPFL
+# Solderpad Hardware License, Version 2.1, see LICENSE.md for details.
+# SPDX-License-Identifier: Apache-2.0 WITH SHL-2.1
+#
+# Author: Juan Sapriza - juan.sapriza@epfl.ch
+
 from scipy.signal import butter,filtfilt
 from scipy import interpolate
 import numpy as np
