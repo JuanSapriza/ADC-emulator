@@ -4,6 +4,8 @@ import io, os, sys
 import numpy as np
 import matplotlib.pyplot as plt
 
+
+sys.path.append("../src/")
 from processes import *
 
 BITS_N = 8
@@ -14,7 +16,7 @@ processes = []
 
 EPIPHONE    = '../in/Epiphone'
 BIOPAC      = '../in/Biopac'
-JACKSON     = '../in/Jackson'
+JACKSON     = '../in/iEEG'
 
 
 def add_to_plot(series, alpha=1):
