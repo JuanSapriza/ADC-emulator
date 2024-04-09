@@ -20,12 +20,17 @@ class Timeseries:
 
         if time is None and length_s != 0:
             T_s = length_s/len(data)
-            f_Hz = 1/T_s
+            f_Hz = 1.0/T_s
             time = np.arange(0,length_s,T_s)
-        self.time   = time if time is not None else []
+        elif time is not None and f_Hz == 0:
+            f_Hz = 1.0/(time[1]-time[0])
+            length_s = len(time)/f_Hz
 
-        self.f_Hz   = f_Hz
-        self.dx     = dx if dx is not None else []
+
+        self.time       = time if time is not None else []
+        self.dx         = dx if dx is not None else []
+        self.f_Hz       = f_Hz
+        self.length_s   = length_s
 
     def __str__(self):
         return self.name
