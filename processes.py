@@ -200,6 +200,31 @@ def norm(series, bits):
         o.data.append(d)
     return o
 
+def offset_to_pos_and_map(series, bits):
+    o = Timeseries(series.name + " map abs")
+    o.time = series.time
+    o.f_Hz = series.f_Hz
+
+    # Push everything above 0
+    minv = min(series.data)
+    print(minv)
+
+    if minv < 0:
+        data = []
+        for s in series.data:
+            data.append(s-minv)
+
+    maxd = max(data)
+    max_val = int(2**bits/2 -1)
+    for s in data:
+        d = max_val*s/maxd
+        if d > max_val:
+            d = max_val
+        elif d < -max_val:
+            d = -max_val
+        o.data.append(d)
+    return o
+
 def quant(series, bits):
     o = Timeseries(series.name + f" Q({bits})")
     o.time = series.time
@@ -476,6 +501,9 @@ def lvls_uniform():
 def lvls_uniform_dense():
     return list(range(-128,129,8))
 
+def lvls_uniform_u32b(width):
+    return list(range(0,np.iinfo(np.uint32).max, width))
+
 def get_density(series, win):
     o = Timeseries("LCdens")
     abst = 0
@@ -538,7 +566,8 @@ def oversample(series, order):
     o = Timeseries(f"Sx{order}")
     o.f_Hz = series.f_Hz*order
     f = interpolate.interp1d(series.time, series.data)
-    o.time = np.arange( series.time[0], series.time[-1], 1/o.f_Hz )
+    num_points = int((series.time[-1] - series.time[0]) * o.f_Hz) + 1
+    o.time = np.linspace( series.time[0], series.time[-1], num_points )
     o.data = f(o.time)
     return o
 
