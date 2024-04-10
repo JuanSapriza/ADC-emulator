@@ -1,5 +1,11 @@
-from timeseries import *
+# Copyright 2024 EPFL
+# Solderpad Hardware License, Version 2.1, see LICENSE.md for details.
+# SPDX-License-Identifier: Apache-2.0 WITH SHL-2.1
+#
+# Author: Juan Sapriza - juan.sapriza@epfl.ch
 
+
+from timeseries import *
 
 def first_level(lvls):
     return int( np.floor( len(lvls)/2 ) )
@@ -248,12 +254,30 @@ def lc_task_detect_spike( series, length = 10, dt = 0.025 ):
             current_value, accum_time, count = data[i], 0, 0
 
         if count == length and accum_time <= dt and one_way == 1:
-            switch_indexes.append(i - length + 2)
             current_value, accum_time, count = data[i], 0, 0
+            switch_indexes.append(i - length + 2)
 
     return switch_indexes
 
+def lc_task_detect_spike_online( series, length = 10, dt = 0.0025 ):
+    data = series.data[1:]
+    time = series.time[1:]
 
+    switch_indexes  = []
+    count = 0
+    blocked = 0
+
+    for i in range(length, len(data)):
+        if data[i] == data[i-1] and time[i] <= dt:
+            count += 1
+        elif count >= length:
+            if not blocked:
+                switch_indexes.append(i+1)
+                count, blocked = 0, 1
+            else:
+                count, blocked = 0, 0
+
+    return switch_indexes
 
 
 

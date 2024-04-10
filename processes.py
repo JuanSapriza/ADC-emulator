@@ -201,14 +201,10 @@ def norm(series, bits):
     return o
 
 def offset_to_pos_and_map(series, bits):
-    o = Timeseries(series.name + " map abs")
-    o.time = series.time
-    o.f_Hz = series.f_Hz
+    o = Timeseries(series.name + " map abs", time = series.time, f_Hz = series.f_Hz)
 
     # Push everything above 0
     minv = min(series.data)
-    print(minv)
-
     if minv < 0:
         data = []
         for s in series.data:

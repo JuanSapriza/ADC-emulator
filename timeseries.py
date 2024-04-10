@@ -25,7 +25,8 @@ class Timeseries:
         elif time is not None and f_Hz == 0:
             f_Hz = 1.0/(time[1]-time[0])
             length_s = len(time)/f_Hz
-
+        elif time is not None:
+            length_s = len(time)/f_Hz
 
         self.time       = time if time is not None else []
         self.dx         = dx if dx is not None else []
