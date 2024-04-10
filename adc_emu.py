@@ -138,7 +138,7 @@ class ADC:
         o.time = series.time
         o.f_Hz = series.f_Hz
         for s, i  in zip(series.data, range(len(series.data))):
-            d = approximation( (2**self.ampl_bits)*( s + self.dynRange[1])/(self.dynRange[1]-self.dynRange[0]) )
+            d = int(approximation( (2**self.ampl_bits)*( s + self.dynRange[1])/(self.dynRange[1]-self.dynRange[0]) ))
             o.data.append(d)
         return o
 

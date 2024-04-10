@@ -228,7 +228,7 @@ def lcadc_reconstruct_time(series, height=16):
         o.time.append( t )
         o.time.append( t +dt )
         o.data.append( 0 )
-        o.data.append( height if series.data[x] >0 else -height )
+        o.data.append( height*series.data[x] )
         o.data.append( 0 )
         i += 3
     return o
@@ -268,8 +268,8 @@ def lc_task_detect_spike_online( series, length = 10, dt = 0.0025 ):
     blocked = 0
 
     for i in range(length, len(data)):
-        if data[i] == data[i-1] and time[i] <= dt:
-            count += 1
+        if np.sign(data[i]) == np.sign(data[i-1]) and time[i] <= dt:
+            count += abs(data[i])
         elif count >= length:
             if not blocked:
                 switch_indexes.append(i+1)
@@ -279,6 +279,27 @@ def lc_task_detect_spike_online( series, length = 10, dt = 0.0025 ):
 
     return switch_indexes
 
+
+
+def lc_subsampler( series, lvl_width_bits ):
+    o = Timeseries(series.name + f" LCsubs({lvl_width_bits})")
+
+    lvl_width     = 2**lvl_width_bits
+    current_lvl   = ((series.data[0]) // lvl_width)*lvl_width
+    o.data.append(0)
+    o.time.append(series.time[0])
+
+    for i in range(1, len(series.data)):
+        diff = (series.data[i] - current_lvl) // lvl_width
+        if diff != 0:
+            o.data.append(diff)
+            o.time.append( series.time[i] - sum(o.time[ : len(o.time) ]) )
+            current_lvl = max( 0, current_lvl + diff*lvl_width)
+
+    # Average acquisition rate over the sampled period
+    o.f_Hz = len(o.data)/series.length_s
+
+    return o
 
 
 def lvls_shifted():
