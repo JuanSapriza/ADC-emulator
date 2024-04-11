@@ -268,14 +268,18 @@ def lc_task_detect_spike_online( series, length = 10, dt = 0.0025 ):
     blocked = 0
 
     for i in range(length, len(data)):
-        if np.sign(data[i]) == np.sign(data[i-1]) and time[i] <= dt:
-            count += abs(data[i])
-        elif count >= length:
-            if not blocked:
-                switch_indexes.append(i+1)
-                count, blocked = 0, 1
+        # print(np.sign(data[i]) != np.sign(data[i-1]) or time[i] > dt, time[i] <= dt, count >= length)
+        if np.sign(data[i]) != np.sign(data[i-1]) or time[i] > dt:
+            if count >= length:
+                if not blocked:
+                    switch_indexes.append(i+1)
+                    count, blocked = 0, 1
+                else:
+                    count, blocked = 0, 0
             else:
-                count, blocked = 0, 0
+                count = 0
+        if time[i] <= dt:
+            count += abs(data[i])
 
     return switch_indexes
 
