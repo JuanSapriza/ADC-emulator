@@ -338,3 +338,7 @@ def lvls_uniform_dense():
 
 def lvls_uniform_u32b(width):
     return list(range(0,np.iinfo(np.uint32).max, width))
+
+def lvls_uniform_u32b_by_fraction(fraction):
+    l = list(np.arange(0,np.iinfo(np.uint32).max, np.iinfo(np.uint32).max/fraction))
+    return l
