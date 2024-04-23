@@ -300,8 +300,7 @@ def lc_aso(series, lvls):
 
 
 def oversample(series, order):
-    o = Timeseries(f"Sx{order}")
-    o.f_Hz = series.f_Hz*order
+    o = Timeseries(f"Sx{order}", f_Hz = series.f_Hz*order)
     f = interpolate.interp1d(series.time, series.data)
     num_points = int((series.time[-1] - series.time[0]) * o.f_Hz) + 1
     o.time = np.linspace( series.time[0], series.time[-1], num_points )

@@ -10,8 +10,8 @@ import pickle
 class Timeseries:
     def __init__(self,
                  name,
-                 data = None,
-                 time = None,
+                 data = np.empty((0,)),
+                 time = np.empty((0,)),
                  f_Hz = 0,
                  length_s = 0,
                  dx = None ):
@@ -22,13 +22,13 @@ class Timeseries:
             T_s = length_s/len(data)
             f_Hz = 1.0/T_s
             time = np.arange(0,length_s,T_s)
-        elif time is not None and f_Hz == 0:
+        elif time.size != 0 and f_Hz == 0:
             f_Hz = 1.0/(time[1]-time[0])
             length_s = len(time)/f_Hz
-        elif time is not None:
+        elif time.size != 0:
             length_s = len(time)/f_Hz
 
-        self.time       = time if time is not None else []
+        self.time       = time if time.size != 0 else []
         self.dx         = dx if dx is not None else []
         self.f_Hz       = f_Hz
         self.length_s   = length_s
