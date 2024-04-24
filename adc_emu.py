@@ -22,7 +22,7 @@ class ADC:
                   THD_pc        : float                 = 0,
                   epc_J         : float                 = 0,
                   tpc_s         : float                 = 0,
-                  ampl_bits     : int                   = 0,
+                  res_b     : int                   = 0,
                   time_bits     : int                   = 0,
                   buf_smpl      : int                   = 1,
                   channels      : int                   = 1,
@@ -49,7 +49,7 @@ class ADC:
         - THD_pc (float): Total Harmonic Distortion (per cent). Default is 0%.
         - epc_J (float): Energy per Conversion in Joules. Default 0 for an ideal conversion.
         - tpc_s (float): Time per Conversion in seconds. Default 0 for no delay in the acquisition.
-        - ampl_bits (int): Number of bits of amplitude resolution. Default 0 for full precision.
+        - res_b (int): Number of bits of amplitude resolution. Default 0 for full precision.
         - time_bits (int): Number of bits of timing resolution. Default 0 for full precision.
         - buf_smpl (int): Number of samples to buffer before transmitting or interrupting. Defualt 1 for transmission upon acquisition.
         - channels (int): Number of channels of the ADC. Channels are time-division multiplexed (TDM). Default 1 for single channel.
@@ -70,7 +70,7 @@ class ADC:
         self.THD_pc         = THD_pc        # Not yet used
         self.epc_J          = epc_J         # Not yet used
         self.tpc_s          = tpc_s         # Not yet used
-        self.ampl_bits      = ampl_bits
+        self.res_b      = res_b
         self.time_bits      = time_bits     # Not yet used
         self.buf_smpl       = buf_smpl      # Not yet used
         self.channels       = channels
@@ -134,11 +134,11 @@ class ADC:
     def quantize(self, series: Timeseries, approximation: callable ):
         if self.dynRange[0] >= self.dynRange[1]:
             raise ValueError("The Dynamic Range should be defined as [Lower bound, Upper bound] and these should be different.")
-        o = Timeseries(series.name + f" Q({self.ampl_bits})")
+        o = Timeseries(series.name + f" Q({self.res_b})")
         o.time = series.time
         o.f_Hz = series.f_Hz
         for s, i  in zip(series.data, range(len(series.data))):
-            d = int(approximation( (2**self.ampl_bits)*( s + self.dynRange[1])/(self.dynRange[1]-self.dynRange[0]) ))
+            d = int(approximation( (2**self.res_b)*( s + self.dynRange[1])/(self.dynRange[1]-self.dynRange[0]) ))
             o.data.append(d)
         return o
 
@@ -161,9 +161,9 @@ class mcADC:
         for i in range(len(s.time)):
             for c, c_idx in zip(self.channels, range(len(self.channels))):
                 # CODIFICATION = 0bCC...CCDD...DD where C represent bits for the channel index and D bits for data in the resolution of the ADC.
-                encoded = int(c.conversion.data[i]) + c_idx*(2**(c.ampl_bits))
+                encoded = int(c.conversion.data[i]) + c_idx*(2**(c.res_b))
                 data.append(encoded)
-                # print(f"{bin(encoded)[2:].zfill(c.ampl_bits+2)}")
+                # print(f"{bin(encoded)[2:].zfill(c.res_b+2)}")
 
         self.conversion = Timeseries( name = f"TDM {len(self.channels)} channels",
                                      data = data,
