@@ -304,6 +304,7 @@ def oversample(series, order):
     f = interpolate.interp1d(series.time, series.data)
     num_points = int((series.time[-1] - series.time[0]) * o.f_Hz) + 1
     o.time = np.linspace( series.time[0], series.time[-1], num_points )
+    o.length_s = max(o.time)
     o.data = f(o.time)
     return o
 
