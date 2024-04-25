@@ -5,7 +5,7 @@
 # Author: Juan Sapriza - juan.sapriza@epfl.ch
 
 from scipy.signal import butter,filtfilt
-from scipy import interpolate
+from scipy import interpolate, signal
 import numpy as np
 
 from timeseries import Timeseries
@@ -337,3 +337,31 @@ def compute_sdr(original_signal, new_signal, interpolate=False):
     sdr = 10 * np.log10(power_original_signal / power_distortion)
 
     return sdr
+
+def add_noise(series, drop_rate_dBpdec=-3, initial_magnitude=100, line_magnitude=0.1):
+    o = Timeseries("Noisy signal")
+    o.time = series.time
+    o.f_Hz = series.f_Hz
+
+    # Generate random noise with desired characteristics
+    num_samples = len(series.data)
+    freqs       = np.fft.fftfreq(num_samples, 1/series.f_Hz)
+    magnitude   = initial_magnitude / (1 + (freqs / 1)**2)**(abs(drop_rate_dBpdec) / 20)  # Magnitude with drop rate
+    phase       = np.random.uniform(0, 2*np.pi, num_samples)  # Random phase
+    spectrum    = magnitude * np.exp(1j * phase)
+    noise       = np.fft.ifft(spectrum).real
+    # Add sinusoidal noise at 50 Hz
+    sinusoidal_noise = line_magnitude * np.sin(2 * np.pi * 50 * series.time)
+    # Combine the noises
+    total_noise = noise + sinusoidal_noise
+    # Add noise to the original signal
+    o.data = series.data + total_noise
+    return o
+
+def normalize( series):
+    factor = 1/( max( abs(max(series.data)), abs(min(series.data)) ))
+    o = Timeseries( "Normalized",
+                    data = series.data*factor,
+                    time = series.time
+                    )
+    return o, factor
