@@ -6,6 +6,7 @@
 
 
 from timeseries import *
+from processes import *
 
 def first_level(lvls):
     return int( np.floor( len(lvls)/2 ) )
@@ -260,10 +261,9 @@ def lc_task_detect_spike( series, length = 10, dt = 0.025 ):
     return switch_indexes
 
 def lc_task_detect_spike_online( series, length = 10, dt = 0.0025 ):
+    o = Timeseries(series.name + " LC R-peak detection")
     data = series.data[1:]
     time = series.time[1:]
-
-    switch_indexes  = []
     count = 0
     blocked = 0
 
@@ -272,7 +272,7 @@ def lc_task_detect_spike_online( series, length = 10, dt = 0.0025 ):
         if np.sign(data[i]) != np.sign(data[i-1]) or time[i] > dt:
             if count >= length:
                 if not blocked:
-                    switch_indexes.append(i+1)
+                    o.time.append( sum(series.time[:i+1]) )
                     count, blocked = 0, 1
                 else:
                     count, blocked = 0, 0
@@ -280,8 +280,7 @@ def lc_task_detect_spike_online( series, length = 10, dt = 0.0025 ):
                 count = 0
         if time[i] <= dt:
             count += abs(data[i])
-
-    return switch_indexes
+    return o
 
 
 
@@ -305,6 +304,37 @@ def lc_subsampler( series, lvl_width_bits ):
 
     return o
 
+def lc_analog(analog_signal: Timeseries, lvl_width_fraction = 0.1):
+    lvls = lvls_uniform_u32b_by_fraction(lvl_width_fraction)
+    scaled_signal  = offset_to_pos_and_map( analog_signal, 32)
+    return lcadc_naive(scaled_signal, lvls), lvls
+
+def lc_subsample(analog_signal, adc_fs_Hz = 100, adc_res_b = 8, lvl_width_bits = 1 ):
+    fradc = ADC(    name        = "ADC for LC subsampling",
+                    units       = "Normalized",
+                    f_Hz        = adc_fs_Hz,
+                    res_b       = adc_res_b,
+                    dynRange    = [-1, 1],
+                    series      = analog_signal )
+    return lc_subsampler(fradc.conversion, lvl_width_bits ), fradc.conversion
+
+
+def lc_aso(series, lvls):
+    o = Timeseries("LCASO")
+    lvl = first_level(lvls)
+    t =  series.time[0]
+    for i in range(1, len(series.data) ):
+        dt = series.time[i]
+        t += dt
+        dir = series.data[i]
+        lvl += dir
+        y = lvls[lvl]
+        dy = y - lvls[ lvl- dir ]
+        slope = dy/dt
+        aso = y*slope
+        o.time.append(t)
+        o.data.append(aso)
+    return o
 
 def lvls_shifted():
     lvls_a = [ 2, 4, 8, 16, 32, 64, 128 ]

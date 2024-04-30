@@ -14,21 +14,22 @@ class ADC:
     def __init__( self,
                   name          : str                   = "myVirtualADC",
                   units         : str                   = "Arbitrary units",
-                  f_sample_Hz   : float                 = 0,
+                  f_Hz          : float                 = 0,
                   dynRange      : list[float, float]    = [0,0],
                   bandwidth     : list[float, float]    = [0,0],
                   noise_dev     : float                 = 0,
+                  phase_deg     : float                 = 0,
                   SNR_dB        : float                 = 100,
                   THD_pc        : float                 = 0,
                   epc_J         : float                 = 0,
                   tpc_s         : float                 = 0,
-                  res_b     : int                   = 0,
+                  res_b         : int                   = 0,
                   time_bits     : int                   = 0,
                   buf_smpl      : int                   = 1,
                   channels      : int                   = 1,
                   diff          : bool                  = False,
                   interrupt     : int                   = -1,
-                  series        : Timeseries           = None,
+                  series        : Timeseries            = None,
                 #   levels        : callable[[None],list] = None,
                 #   in_custom     : callable[[Timeseries], Timeseries] = None,
                 #   out_custom    : callable[[Timeseries], Timeseries] = None,
@@ -41,7 +42,7 @@ class ADC:
         Parameters:
         - name (str): Name of the virtual ADC to identify it. Default "myVirtualADC".
         - units (str): Units in which the data is represented. Default "Arbitrary units".
-        - f_sample_Hz (float): Sampling frequency of the ADC. If larger than the input frequency of the signal, this will be oversampled. Default 0 for no fixed sampling rate.
+        - f_Hz (float): Sampling frequency of the ADC. If larger than the input frequency of the signal, this will be oversampled. Default 0 for no fixed sampling rate.
         - dynRange (List[float,float]): Dynamic Range of the ADC (in the input units), lower and upper bounds. Default [0,0] for no limits.
         - bandwidth (List[float,float]): Frequency bounds of a band-pass filter at the input of the ADC. Default [0,0] for no filter.
         - noise_dev (float): Deviation of a Gaussian noise at the input. Default 0 for no noise.
@@ -62,7 +63,8 @@ class ADC:
         """
         self.name           = name
         self.units          = units
-        self.f_sample_Hz    = f_sample_Hz
+        self.f_Hz           = f_Hz
+        self.phase_deg      = phase_deg
         self.dynRange       = dynRange
         self.bandwidth      = bandwidth     # Not yet used
         self.noise_dev      = noise_dev     # Not yet used
@@ -70,7 +72,7 @@ class ADC:
         self.THD_pc         = THD_pc        # Not yet used
         self.epc_J          = epc_J         # Not yet used
         self.tpc_s          = tpc_s         # Not yet used
-        self.res_b      = res_b
+        self.res_b          = res_b
         self.time_bits      = time_bits     # Not yet used
         self.buf_smpl       = buf_smpl      # Not yet used
         self.channels       = channels
@@ -90,7 +92,7 @@ class ADC:
 
     def feed( self, series: Timeseries ):
 
-        series = self.resample( series, timestamps = None, f_Hz = self.f_sample_Hz)
+        series = self.resample( series, timestamps = None, f_Hz = self.f_Hz, phase_deg=self.phase_deg)
         series = self.clip( series, self.dynRange )
         series = self.quantize( series, np.ceil)
         convert = series
@@ -101,11 +103,12 @@ class ADC:
 
 
 
-    def resample(self, series: Timeseries, timestamps = None, f_Hz = 0  ):
+    def resample(self, series: Timeseries, timestamps = None, f_Hz = 0, phase_deg = 0  ):
         if timestamps == None:
             if f_Hz == 0:
                 raise   ValueError("Either timestamps or f_Hz should be provided.")
-            timestamps = np.arange(series.time[0], series.time[-1], 1 / f_Hz)
+            dephase_s   = (phase_deg/180)*(1/f_Hz)
+            timestamps  = np.arange(series.time[0]+ dephase_s, series.time[-1], 1 / f_Hz)
 
         resampled_data = np.interp(timestamps, series.time, series.data)
         o = Timeseries("resampled")

@@ -281,22 +281,7 @@ def spike_det_lc(series, dt, count):
     return o
 
 
-def lc_aso(series, lvls):
-    o = Timeseries("LCASO")
-    lvl = first_level(lvls)
-    t =  series.time[0]
-    for i in range(1, len(series.data) ):
-        dt = series.time[i]
-        t += dt
-        dir = series.data[i]
-        lvl += dir
-        y = lvls[lvl]
-        dy = y - lvls[ lvl- dir ]
-        slope = dy/dt
-        aso = y*slope
-        o.time.append(t)
-        o.data.append(aso)
-    return o
+
 
 
 def oversample(series, order):
