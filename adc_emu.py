@@ -97,9 +97,10 @@ class ADC:
         series = self.quantize( series, np.ceil)
         convert = series
         self.conversion = Timeseries("Conversion " + self.name,
-                                    data = convert.data,
-                                    time = convert.time,
-                                    f_Hz = convert.f_Hz )
+                                    data        = convert.data,
+                                    time        = convert.time,
+                                    f_Hz        = convert.f_Hz,
+                                    sample_b    = self.res_b )
 
 
 

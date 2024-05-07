@@ -10,11 +10,11 @@ import pickle
 class Timeseries:
     def __init__(self,
                  name,
-                 data = None,
-                 time = None,
-                 f_Hz = 0,
-                 length_s = 0,
-                 dx = None ):
+                 data       = None,
+                 time       = None,
+                 f_Hz       = 0,
+                 length_s   = 0,
+                 sample_b   = None ):
         self.name   = name
         self.data   = data if data is not None else []
 
@@ -29,7 +29,7 @@ class Timeseries:
             length_s = len(time)/f_Hz
 
         self.time       = time if time is not None else []
-        self.dx         = dx if dx is not None else []
+        self.sample_b   = sample_b if sample_b is not None else []
         self.f_Hz       = f_Hz
         self.length_s   = length_s
 
