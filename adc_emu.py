@@ -70,7 +70,7 @@ class ADC:
         self.noise_dev      = noise_dev     # Not yet used
         self.SNR_dB         = SNR_dB        # Not yet used
         self.THD_pc         = THD_pc        # Not yet used
-        self.epc_J          = epc_J         # Not yet used
+        self.epc_J          = epc_J
         self.tpc_s          = tpc_s         # Not yet used
         self.res_b          = res_b
         self.time_bits      = time_bits     # Not yet used
@@ -83,9 +83,10 @@ class ADC:
         # self.out_custom     = out_custom
         # self.time_custom    = time_custom
         self.linear_range   = linear_range  # Not yet used
-        self.latency_s   = 0                # Not yet used
-        self.energy_J    = 0                # Not yet used
-        self.conversion  = None
+        self.latency_s      = 0             # Not yet used
+        self.energy_J       = 0
+        self.power_avg_W    = 0
+        self.conversion     = None
         if series != None: self.feed(series)
 
 
@@ -95,6 +96,7 @@ class ADC:
         series = self.resample( series, timestamps = None, f_Hz = self.f_Hz, phase_deg=self.phase_deg)
         series = self.clip( series, self.dynRange )
         series = self.quantize( series, np.ceil)
+        series = self.measEnergy( series )
         convert = series
         self.conversion = Timeseries("Conversion " + self.name,
                                     data        = convert.data,
@@ -102,7 +104,12 @@ class ADC:
                                     f_Hz        = convert.f_Hz,
                                     sample_b    = self.res_b )
 
+        self.power_W = self.energy_J/self.conversion.length_s
 
+
+    def measEnergy(self, series: Timeseries ):
+        series.energy_J = series.epc_J * len(series.data)
+        return series
 
     def resample(self, series: Timeseries, timestamps = None, f_Hz = 0, phase_deg = 0  ):
         if timestamps == None:

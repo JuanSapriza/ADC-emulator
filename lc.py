@@ -304,6 +304,22 @@ def lc_subsampler( series, lvl_width_bits ):
 
     return o
 
+
+
+## lcadc_naive is the LC algorithm
+## This one instead should define the sampling format
+def lcadc(analog_signal: Timeseries, lvl_width_fraction = 0.1):
+    lvls = lvls_uniform_u32b_by_fraction(lvl_width_fraction)
+    scaled_signal  = offset_to_pos_and_map( analog_signal, 32)
+
+
+
+
+
+    return lcadc_naive(scaled_signal, lvls), lvls
+
+
+
 def lc_analog(analog_signal: Timeseries, lvl_width_fraction = 0.1):
     lvls = lvls_uniform_u32b_by_fraction(lvl_width_fraction)
     scaled_signal  = offset_to_pos_and_map( analog_signal, 32)
