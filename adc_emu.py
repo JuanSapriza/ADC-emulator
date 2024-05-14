@@ -29,6 +29,9 @@ class ADC:
                   channels      : int                   = 1,
                   diff          : bool                  = False,
                   interrupt     : int                   = -1,
+                  ac_coupling_n : int                   = 0,
+                  signed        : bool                  = False,
+                  map           : bool                  = False,
                   series        : Timeseries            = None,
                 #   levels        : callable[[None],list] = None,
                 #   in_custom     : callable[[Timeseries], Timeseries] = None,
@@ -56,6 +59,9 @@ class ADC:
         - channels (int): Number of channels of the ADC. Channels are time-division multiplexed (TDM). Default 1 for single channel.
         - diff (bool): Whether the ADC should output the difference between channels. Requires even number of channels. Default 0 for no differential output.
         - interrupt (bool): GPIO number to toggle to announce an available sample. Default -1 for no interrupts.
+        - ac_coupling_n (int): Number of samples of the input signal to use as window of the moving mean over which to apply a moving mean
+        - signed (bool): Whether results can be negative or not
+        - map (bool): Only for DAC. Whether to map the input range (dynamic range) into the output full scale.
         - levels (callable[[None],list]): Function defining a list of levels for Level-Crossing (LC) ADC. None for no LC ADC.
         - in_custom (callable[[Timeseries], Timeseries]): A function that performs a custom operation over the input Timeseries, resulting in a modified Timeseries. Default None for no operation.
         - out_custom (callable[[Timeseries], Timeseries]): A function that performs a custom operation over the output Timeseries, resulting in a modified Timeseries. Default None for no operation.
@@ -78,6 +84,9 @@ class ADC:
         self.channels       = channels
         self.diff           = diff          # Not yet used
         self.interrupt      = interrupt     # Not yet used
+        self.ac_coupling_n  = ac_coupling_n
+        self.signed         = signed
+        self.map            = map
         # self.levels         = levels
         # self.in_custom      = in_custom
         # self.out_custom     = out_custom
@@ -86,26 +95,33 @@ class ADC:
         self.latency_s      = 0             # Not yet used
         self.energy_J       = 0
         self.power_avg_W    = 0
-        self.conversion     = None
+        self.conversion     = Timeseries(f"ADC {self.name}")
         if series != None: self.feed(series)
 
+
+    def sample( self, value, time = None ):
+        x = self.clip_val(value)
+        x = self.quantize_val( x, np.round )
+        self.conversion.data.append(x)
+        self.conversion.time.append(time)
+        return x
 
 
     def feed( self, series: Timeseries ):
 
+        series = mean_sub( series, self.ac_coupling_n )
+        # @ToDo: Move the following methods to the processes package
         series = self.resample( series, timestamps = None, f_Hz = self.f_Hz, phase_deg=self.phase_deg)
-        series = self.clip( series, self.dynRange )
+        series = self.clip( series )
         series = self.quantize( series, np.ceil)
-        series = self.measEnergy( series )
-        convert = series
+        # series = self.measEnergy( series )
         self.conversion = Timeseries("Conversion " + self.name,
-                                    data        = convert.data,
-                                    time        = convert.time,
-                                    f_Hz        = convert.f_Hz,
+                                    data        = series.data,
+                                    time        = series.time,
+                                    f_Hz        = series.f_Hz,
                                     sample_b    = self.res_b )
 
         self.power_W = self.energy_J/self.conversion.length_s
-
 
     def measEnergy(self, series: Timeseries ):
         series.energy_J = series.epc_J * len(series.data)
@@ -126,21 +142,29 @@ class ADC:
         return o
 
 
-    def clip(self, series: Timeseries, dynRange: list[float, float] = [0,0] ):
-        if dynRange[0] >= dynRange[1]:
+    def clip(self, series: Timeseries ):
+        if self.dynRange[0] >= self.dynRange[1]:
             raise ValueError("The Dynamic Range should be defined as [Lower bound, Upper bound] and these should be different.")
 
-        o = Timeseries(series.name + f" Clipped({dynRange[0]},{dynRange[1]})")
+        o = Timeseries(series.name + f" Clipped({self.dynRange[0]},{self.dynRange[1]})")
         o.time = series.time
         o.f_Hz = series.f_Hz
         for s in series.data:
             d = s
-            if s < dynRange[0]:
-                d = dynRange[0]
-            elif s > dynRange[1]:
-                d = dynRange[1]
+            if s < self.dynRange[0]:
+                d = self.dynRange[0]
+            elif s > self.dynRange[1]:
+                d = self.dynRange[1]
             o.data.append(d)
         return o
+
+    def clip_val( self, value ):
+        d = value
+        if value < self.dynRange[0]:
+            d = self.dynRange[0]
+        elif value > self.dynRange[1]:
+            d = self.dynRange[1]
+        return d
 
     def quantize(self, series: Timeseries, approximation: callable ):
         if self.dynRange[0] >= self.dynRange[1]:
@@ -148,11 +172,25 @@ class ADC:
         o = Timeseries(series.name + f" Q({self.res_b})")
         o.time = series.time
         o.f_Hz = series.f_Hz
-        for s, i  in zip(series.data, range(len(series.data))):
-            d = int(approximation( (2**self.res_b)*( s + self.dynRange[1])/(self.dynRange[1]-self.dynRange[0]) ))
-            o.data.append(d)
+        if self.signed:
+            for s  in series.data:
+                d = int(approximation( (2**self.res_b-1) * s/(self.dynRange[1]-self.dynRange[0]) ))
+                o.data.append(d)
+        else:
+            for s  in series.data:
+                d = int(approximation( (2**self.res_b)*( s + self.dynRange[1])/(self.dynRange[1]-self.dynRange[0]) ))
+                o.data.append(d)
         return o
 
+    def quantize_val( self, value, approximation ):
+        if self.signed:
+            if self.map:
+                return int(approximation( (2**self.res_b)* value/(self.dynRange[1]-self.dynRange[0]) )) - 2**(self.res_b-1)
+            else:
+                return int(approximation( (2**self.res_b -1 )* value/(self.dynRange[1]-self.dynRange[0]) ))
+        else:
+            # @ToDo: This logic is wrong! only works with symmetric DR around 0!
+            return int(approximation( (2**self.res_b)*( value + self.dynRange[1])/(self.dynRange[1]-self.dynRange[0]) ))
 
 class mcADC:
     def __init__(self,

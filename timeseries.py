@@ -5,6 +5,7 @@
 # Author: Juan Sapriza - juan.sapriza@epfl.ch
 
 import numpy as np
+from copy import deepcopy
 import pickle
 
 class Timeseries:
@@ -71,3 +72,6 @@ class Timeseries:
     def load(cls, filename ):
         with open( filename, 'rb' ) as f:
             return pickle.load(f)
+
+def copy_series( series ):
+    return deepcopy( series)

@@ -8,7 +8,7 @@ from scipy.signal import butter,filtfilt
 from scipy import interpolate, signal
 import numpy as np
 
-from timeseries import Timeseries
+from timeseries import *
 
 
 class Process:
@@ -125,18 +125,23 @@ def needle(series, win):
         o.time.append( series.time[k.data[i]] )
     return o
 
-
+def ac_couple(series, win):
+    if win == 0: return series
+    o = copy_series( series )
+    o.name += "AC coupled"
+    for i in range(win,len(series.time)):
+        m = np.average(series.data[i-win:i])
+        o.data.append( series.data[i] - m )
+        o.time.append( series.time[i] )
+    return o
 
 def mean_sub(series, win):
     o = Timeseries(series.name + " Mean")
     o.f_Hz = series.f_Hz
     for i in range(win,len(series.time)):
-        ### print('',end='\r')
         m = np.average(series.data[i-win:i])
         o.data.append( series.data[i] - m )
         o.time.append( series.time[i] )
-        ### print(i, end='')
-    ### print('',end='\r')
     return o
 
 def pseudo_mean(series, bits):
@@ -149,8 +154,6 @@ def pseudo_mean(series, bits):
         m = mb >> bits  # m[i] = m[i]xb /b
         o.data.append( m )
         o.time.append( series.time[i] )
-        ### print('\r',i, end='')
-    ### print('',end='\r')
     return o
 
 def lpf_butter(series, cutoff, order):
@@ -202,7 +205,7 @@ def norm(series, bits):
 
 def offset_to_pos_and_map(series, bits):
     o = Timeseries(series.name + " map abs", time = series.time, f_Hz = series.f_Hz)
-
+    o.sample_b = bits
     # Push everything above 0
     minv = min(series.data)
     if minv < 0:
