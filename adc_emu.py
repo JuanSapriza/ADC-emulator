@@ -32,6 +32,7 @@ class ADC:
                   ac_coupling_n : int                   = 0,
                   signed        : bool                  = False,
                   map           : bool                  = False,
+                  out_range_b     : int                   = 0,
                   series        : Timeseries            = None,
                 #   levels        : callable[[None],list] = None,
                 #   in_custom     : callable[[Timeseries], Timeseries] = None,
@@ -54,6 +55,7 @@ class ADC:
         - epc_J (float): Energy per Conversion in Joules. Default 0 for an ideal conversion.
         - tpc_s (float): Time per Conversion in seconds. Default 0 for no delay in the acquisition.
         - res_b (int): Number of bits of amplitude resolution. Default 0 for full precision.
+        - out_range_b (int): Amplify the output (without affecting resolution, just a scaling of the data), to match this output range (in bits)
         - time_bits (int): Number of bits of timing resolution. Default 0 for full precision.
         - buf_smpl (int): Number of samples to buffer before transmitting or interrupting. Defualt 1 for transmission upon acquisition.
         - channels (int): Number of channels of the ADC. Channels are time-division multiplexed (TDM). Default 1 for single channel.
@@ -79,6 +81,7 @@ class ADC:
         self.epc_J          = epc_J
         self.tpc_s          = tpc_s         # Not yet used
         self.res_b          = res_b
+        self.out_range_b      = out_range_b
         self.time_bits      = time_bits     # Not yet used
         self.buf_smpl       = buf_smpl      # Not yet used
         self.channels       = channels
@@ -100,20 +103,22 @@ class ADC:
 
 
     def sample( self, value, time = None ):
-        x = self.clip_val(value)
-        x = self.quantize_val( x, np.round )
-        self.conversion.data.append(x)
-        self.conversion.time.append(time)
-        return x
+        value = self.clip_val( value )
+        value = self.quantize_val( value, np.round )
+        value = self.amplify_val( value )
+        self.conversion.data.append( value )
+        self.conversion.time.append( time )
+        return value
 
 
     def feed( self, series: Timeseries ):
 
-        series = mean_sub( series, self.ac_coupling_n )
+        if self.ac_coupling_n != 0: series = mean_sub( series, self.ac_coupling_n )
         # @ToDo: Move the following methods to the processes package
         series = self.resample( series, timestamps = None, f_Hz = self.f_Hz, phase_deg=self.phase_deg)
         series = self.clip( series )
         series = self.quantize( series, np.ceil)
+        series = self.amplify_output( series )
         # series = self.measEnergy( series )
         self.conversion = Timeseries("Conversion " + self.name,
                                     data        = series.data,
@@ -191,6 +196,16 @@ class ADC:
         else:
             # @ToDo: This logic is wrong! only works with symmetric DR around 0!
             return int(approximation( (2**self.res_b)*( value + self.dynRange[1])/(self.dynRange[1]-self.dynRange[0]) ))
+
+    def amplify_output( self, series ):
+        if self.out_range_b == 0: return series
+        series.data = np.array(series.data) << int( self.out_range_b - self.res_b )
+        return series # @ToDo: make other steps be the same as this (not having N timeseries!)
+
+    def amplify_val( self, value ):
+        if self.out_range_b == 0: return value
+        return value << int( self.out_range_b - self.res_b )
+
 
 class mcADC:
     def __init__(self,
