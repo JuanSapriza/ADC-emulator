@@ -206,7 +206,7 @@ def lcadc_reconstruct(series, lvls, offset=0):
     first = first_level(lvls)
     lvl = first + offset
     o.time.append(series.time[0])
-    o.data.append(lvls[lvl])
+    o.data.append(0)
     for i in range(1, len(series.data)):
         o.time.append( o.time[i-1] + series.time[i] )
         lvl = min( max(0, lvl + series.data[i] ), len(lvls) -1 )
@@ -284,19 +284,116 @@ def lc_task_detect_spike_online( series, length = 10, dt = 0.0025 ):
 
 
 
-def lc_subsampler( series, lvl_width_bits ):
-    o = Timeseries(series.name + f" LCsubs({lvl_width_bits})")
+def lc_subsampler_C( series, lvl_w_b ):
+    o = Timeseries("LC in C")
+    lvl_w = 2**lvl_w_b
 
-    lvl_width     = 2**lvl_width_bits
+    current_lvl = 0                     # The last level to be crossed.
+    lvl_up, lvl_down = 0, 0            # The value to be crossed to consider that a level was crossed.
+    x_up, x_down = False, False         # Whether the sample crossed the upper or lower level
+    dir = 0                             # The direction of the crossing (1=up, 0=down). THIS SIGNAL SHOULD BE EXPOSED.
+    xing = False                        # Whether the sample crossed any level. THIS SIGNAL SHOULD BE EXPOSED.
+    xings = 0                           # The count of crossings between two consecutive samples.
+    skipped = 0                         # The count of samples that did not cross any level. Reset on every crossing.
+
+    MAX_VAL = 2**16
+    MIN_VAL = 0
+    MAX_SKIP = 127
+    MAX_XING = 255
+
+    for i in range( len(series.data) ):
+        dir = 0  # Reset the direction signal
+        while True:
+            xings = 0
+            while True:
+                # The upper level is computed.
+                # If the difference between the current level and the upper bound of the range is less than a level,
+                # the next level is set to the top of the range.
+                # The crossing up is only computed if the current level is not already the top.
+                # e.g. If the signal is stuck in 255, 255, 255 (in saturation, for instance)
+                # then no crossings will be detected, although the sample is always coinciding with the upper level.
+                # The same logic is applied to the bottom end of the range.
+                lvl_up      = current_lvl if current_lvl >= MAX_VAL - lvl_w else current_lvl + lvl_w
+                lvl_down    = current_lvl if current_lvl <= MIN_VAL + lvl_w else current_lvl - lvl_w
+                x_up        = (current_lvl != lvl_up)   and (series.data[i] >= lvl_up)
+                x_down      = (current_lvl != lvl_down) and (series.data[i] <= lvl_down)
+
+                # The direction of the crossing is 1 if the crossing was with the upper level. Therefore, it is equal
+                # to the signal that reports exactly that.
+                # It is bit-wise-or'd to keep the value of direction between iterations (when the sample crossed
+                # multiple levels - then, the last time, the x_up would be 0 and we don't want that to propagate to dir).
+                dir |= x_up
+                # A crossing is decteted if either level was crossed.
+                xing = x_up or x_down
+                # The count of crossings is kept by increasing the count on every crossing.
+                xings += xing
+
+                # Once the signal crosses one of the levels, the current level is set to it.
+                if xing and dir:
+                    current_lvl = lvl_up
+                elif xing and not dir:
+                    current_lvl = lvl_down
+
+                # If there was a crossing, there could be more. The iteration is repeated until all level crossings
+                # have been detected.
+                # Additionally, it could happen that the crossings counter reaches its limit.
+                # In that case, we also exit to generate a sample, but continue on the same sample until we have reached
+                # the appropriate level.
+                # Note that this scenario is very unlikely if the level width was properly selected.
+                # If this protections wants to be by-passed, then the crossing counter could be forced to saturate and the
+                # resulting LC signal will have an offset from then onwards (due to the missed crossings). If the DC level
+                # of the signal is irrelevant for the processing task, this approximation could be acceptable.
+                if not(xing and xings != MAX_XING):
+                    break
+
+            # If the sample crossed at least one level, or if we have skipped too many samples (the samples counter saturates),
+            # then an acquisition needs to be performed.
+            if xings or skipped == MAX_SKIP:
+                # The data is formatted as:
+                # MSBs    - Skipped samples count
+                # middle  - Direction
+                # LSBs    - Levels crossed.
+                o.data.append( xings if dir else -xings )
+                o.time.append( skipped )
+
+                # If a sample is acquired, then the skipped samples is reset, otherwise it's increased.
+                skipped = 0
+            else:
+                skipped += 1
+
+            # If an acquisition was performed because the crossing counter reached it's limit, then we should re-iterate
+            # over this sample until no more crossings are detected.
+            if xings == MAX_XING:
+                continue
+            break
+
+    return o
+
+
+
+
+
+def lc_subsampler( series, lvl_w_b, time_in_skips = False ):
+    o = Timeseries(series.name + f" LCsubs({lvl_w_b})")
+
+    lvl_width     = 2**lvl_w_b
     current_lvl   = ((series.data[0]) // lvl_width)*lvl_width
+    last_crossing = 0
     o.data.append(0)
-    o.time.append(series.time[0])
+    if time_in_skips:
+        o.time.append(series.time[0])
+    else:
+        o.time.append(0)
 
     for i in range(1, len(series.data)):
         diff = (series.data[i] - current_lvl) // lvl_width
         if diff != 0:
             o.data.append(diff)
-            o.time.append( series.time[i] - sum(o.time[ : len(o.time) ]) )
+            if time_in_skips:
+                o.time.append( i - last_crossing )
+                last_crossing = i
+            else:
+                o.time.append( (series.time[i] - sum(o.time[ : len(o.time) ])) )
             current_lvl = max( 0, current_lvl + diff*lvl_width)
 
     # Average acquisition rate over the sampled period
@@ -304,18 +401,11 @@ def lc_subsampler( series, lvl_width_bits ):
 
     return o
 
-
-
 ## lcadc_naive is the LC algorithm
 ## This one instead should define the sampling format
 def lcadc(analog_signal: Timeseries, lvl_width_fraction = 0.1):
     lvls = lvls_uniform_u32b_by_fraction(lvl_width_fraction)
     scaled_signal  = offset_to_pos_and_map( analog_signal, 32)
-
-
-
-
-
     return lcadc_naive(scaled_signal, lvls), lvls
 
 
@@ -325,14 +415,14 @@ def lc_analog(analog_signal: Timeseries, lvl_width_fraction = 0.1):
     scaled_signal  = offset_to_pos_and_map( analog_signal, 32)
     return lcadc_naive(scaled_signal, lvls), lvls
 
-def lc_subsample(analog_signal, adc_fs_Hz = 100, adc_res_b = 8, lvl_width_bits = 1 ):
+def lc_subsample(analog_signal, adc_fs_Hz = 100, adc_res_b = 8, lvl_w_b = 1 ):
     fradc = ADC(    name        = "ADC for LC subsampling",
                     units       = "Normalized",
                     f_Hz        = adc_fs_Hz,
                     res_b       = adc_res_b,
                     dynRange    = [-1, 1],
                     series      = analog_signal )
-    return lc_subsampler(fradc.conversion, lvl_width_bits ), fradc.conversion
+    return lc_subsampler(fradc.conversion, lvl_w_b ), fradc.conversion
 
 
 def lc_aso(series, lvls):
