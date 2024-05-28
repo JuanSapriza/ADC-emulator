@@ -203,6 +203,10 @@ def norm(series, bits):
         o.data.append(d)
     return o
 
+def add_offset(series, offset):
+    o = Timeseries( f"{series.name} offset {offset}", data = np.array(series.data) + offset, time = series.time, f_Hz = series.f_Hz)
+    return o
+
 def offset_to_pos_and_map(series, bits):
     o = Timeseries(series.name + " map abs", time = series.time, f_Hz = series.f_Hz)
     o.sample_b = bits
@@ -349,7 +353,14 @@ def add_noise(series, drop_rate_dBpdec=-3, initial_magnitude=100, line_magnitude
 def normalize( series):
     factor = 1/( max( abs(max(series.data)), abs(min(series.data)) ))
     o = Timeseries( "Normalized",
-                    data = series.data*factor,
+                    data = np.array(series.data)*factor,
                     time = series.time
                     )
     return o, factor
+
+def scale( series, factor ):
+    o = Timeseries( f"Scaled x{factor}",
+        data = np.array(series.data)*factor,
+        time = series.time
+        )
+    return o

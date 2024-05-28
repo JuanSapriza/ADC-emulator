@@ -200,6 +200,28 @@ def lcadc_naive(series, lvls):
     o.time = c.diffd.time
     return o
 
+def lcadc_simple( series, lvl_width ):
+    o = Timeseries( "LC simple" )
+    current_level   = np.floor(series.data[0]/lvl_width)
+    for i in range(1, len(series.data)):
+        diff =  np.floor((series.data[i] - current_level*lvl_width)/lvl_width)
+        if diff != 0:
+            o.data.append(np.sign(diff))
+            o.time.append( series.time[i] )
+            current_level = current_level + np.sign(diff)
+    return o
+
+def lcadc_simple_debounce( series, lvl_width ):
+    o = Timeseries( "LC simple" )
+    current_level   = np.floor(series.data[0]/lvl_width)
+    for i in range(1, len(series.data)):
+        diff =  np.trunc(((series.data[i] - current_level*lvl_width)/lvl_width)).astype(int)
+        if diff != 0:
+            o.data.append(np.sign(diff))
+            o.time.append( series.time[i] )
+            current_level = current_level + np.sign(diff)
+    return o
+
 
 def lcadc_reconstruct(series, lvls, offset=0):
     o = Timeseries(series.name + " LCrec")
@@ -209,8 +231,21 @@ def lcadc_reconstruct(series, lvls, offset=0):
     o.data.append(0)
     for i in range(1, len(series.data)):
         o.time.append( o.time[i-1] + series.time[i] )
-        lvl = min( max(0, lvl + series.data[i] ), len(lvls) -1 )
+        lvl = int(min( max(0, lvl + series.data[i] ), len(lvls) -1 ))
         o.data.append( lvls[lvl] )
+    return o
+
+def lcadc_reconstruct_simple(series, lvls, start_lvl, start_time, end_time ):
+    o = Timeseries(series.name + " LCrec")
+    lvl = start_lvl
+    o.time.append(start_time)
+    o.data.append(lvls[lvl])
+    for i in range(0, len(series.data)):
+        o.time.append( series.time[i] )
+        lvl = int(min( max(0, lvl + series.data[i] ), len(lvls) -1 ))
+        o.data.append( lvls[lvl] )
+    o.data.append(lvls[lvl])
+    o.time.append(end_time)
     return o
 
 def lcadc_reconstruct_time(series, height=16):
@@ -234,6 +269,14 @@ def lcadc_reconstruct_time(series, height=16):
         i += 3
     return o
 
+def lcadc_reconstruct_arrows( series ):
+    o = Timeseries(series.name + " LCrecTime")
+    for i in range(1, len(series.data)):
+        t = np.sum( series.time[:i] )
+        d = series.data[i]
+        o.time.append(t)
+        o.data.append(d)
+    return o
 
 
 def lc_task_detect_spike( series, length = 10, dt = 0.025 ):
