@@ -122,11 +122,10 @@ class ADC:
         # series = self.measEnergy( series )
         self.conversion = Timeseries("Conversion " + self.name,
                                     data        = series.data,
-                                    time        = series.time,
-                                    f_Hz        = series.f_Hz,
-                                    sample_b    = self.res_b )
-
-        self.power_W = self.energy_J/self.conversion.length_s
+                                    time        = series.time
+                                    )
+        self.conversion.params = series.params
+        self.conversion.params[TS_PARAMS_EPC_J] = self.epc_J
 
     def measEnergy(self, series: Timeseries ):
         series.energy_J = series.epc_J * len(series.data)
@@ -143,7 +142,8 @@ class ADC:
         o = Timeseries("resampled")
         o.data = resampled_data
         o.time = timestamps
-        o.f_Hz = f_Hz
+        o.params = series.params
+        o.params[TS_PARAMS_F_HZ] = f_Hz
         return o
 
 
@@ -153,7 +153,7 @@ class ADC:
 
         o = Timeseries(series.name + f" Clipped({self.dynRange[0]},{self.dynRange[1]})")
         o.time = series.time
-        o.f_Hz = series.f_Hz
+        o.params = series.params
         for s in series.data:
             d = s
             if s < self.dynRange[0]:
@@ -175,8 +175,9 @@ class ADC:
         if self.dynRange[0] >= self.dynRange[1]:
             raise ValueError("The Dynamic Range should be defined as [Lower bound, Upper bound] and these should be different.")
         o = Timeseries(series.name + f" Q({self.res_b})")
-        o.time = series.time
-        o.f_Hz = series.f_Hz
+        o.time                          = series.time
+        o.params                        = series.params
+        o.params[TS_PARAMS_SAMPLE_B]    = self.res_b
         if self.signed:
             for s  in series.data:
                 d = int(approximation( (2**self.res_b-1) * s/(self.dynRange[1]-self.dynRange[0]) ))
@@ -217,9 +218,9 @@ class mcADC:
 
     def TDM(self):
         s           = self.channels[0].conversion
-        f_tdm_Hz    = s.f_Hz * len(self.channels)
+        f_tdm_Hz    = s.params[TS_PARAMS_F_HZ] * len(self.channels)
         T_tdm_s     = 1/f_tdm_Hz
-        length_s    = len(s.data)*(1/s.f_Hz)
+        length_s    = len(s.data)*(1/s.params[TS_PARAMS_F_HZ])
         time        = np.arange(0,length_s,T_tdm_s)
         data        = []
         for i in range(len(s.time)):

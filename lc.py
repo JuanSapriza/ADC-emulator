@@ -19,7 +19,7 @@ CHANGE = -1
 def lcadc(series, lvls, save_last=True):
     o = Timeseries(series.name + " LCADC")
     first = first_level(lvls)
-    o.f_Hz = 0
+    o.params[TS_PARAMS_F_HZ] = 0
     now = first
     last_l = first
     nxt = 0
@@ -440,7 +440,7 @@ def lc_subsampler( series, lvl_w_b, time_in_skips = False ):
             current_lvl = max( 0, current_lvl + diff*lvl_width)
 
     # Average acquisition rate over the sampled period
-    o.f_Hz = len(o.data)/series.length_s
+    o.params[TS_PARAMS_F_HZ] = len(o.data)/series.params[TS_PARAMS_LENGTH_S]
 
     return o
 

@@ -8,6 +8,15 @@ import numpy as np
 from copy import deepcopy
 import pickle
 
+TS_PARAMS_F_HZ      = "Frequency (Hz)"
+TS_PARAMS_SAMPLE_B  = "Size per sample (bits)"
+TS_PARAMS_LENGTH_S  = "Length (s)"
+TS_PARAMS_PHASE_DEG = "Sampling phase (°)"
+TS_PARAMS_OFFSET_B  = "Input signal offset (bits)"
+TS_PARAMS_POWER_W   = "Sampling power (W)"
+TS_PARAMS_EPC_J     = "Energy per conversion (J)"
+
+
 class Timeseries:
     def __init__(self,
                  name,
@@ -16,7 +25,6 @@ class Timeseries:
                  f_Hz       = 0,
                  length_s   = 0,
                  sample_b   = 0,
-                 cost       = 0,
                   ):
         self.name   = name
         self.data   = data if data is not None else []
@@ -31,11 +39,14 @@ class Timeseries:
         elif time is not None:
             length_s = len(time)/f_Hz
 
+        self.params = {
+            TS_PARAMS_F_HZ      : f_Hz,
+            TS_PARAMS_LENGTH_S  : length_s,
+            TS_PARAMS_SAMPLE_B  : sample_b,
+        }
+
         self.time       = time if time is not None else []
-        self.sample_b   = sample_b
-        self.f_Hz       = f_Hz
-        self.length_s   = length_s
-        self.cost       = cost
+        self.scores     = {}
 
     def __str__(self):
         return self.name
@@ -72,6 +83,9 @@ class Timeseries:
     def load(cls, filename ):
         with open( filename, 'rb' ) as f:
             return pickle.load(f)
+
+    def copy(self):
+        return deepcopy(self)
 
 def copy_series( series ):
     return deepcopy( series)

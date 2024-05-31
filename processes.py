@@ -10,6 +10,9 @@ import numpy as np
 
 from timeseries import *
 
+TS_PARAMS_AMPL_RANGE                = "Amplitude range"
+TS_PARAMS_NOISE_DROP_RATE_DBPDEC    = "Noise drop rate (dB/dec)"
+TS_PARAMS_NOISE_DC_COMP             = "DC component (???)"
 
 class Process:
     def __init__(self, process, *args):
@@ -71,8 +74,8 @@ def pas(series, e):
 
 def neo(series, win):
     o = Timeseries(series.name + " NEO")
-    o.f_Hz = series.f_Hz
-    t_diff = int(o.f_Hz*win)
+    o.params[TS_PARAMS_F_HZ] = series.params[TS_PARAMS_F_HZ]
+    t_diff = int(o.params[TS_PARAMS_F_HZ]*win)
     for i in range(t_diff,len(series.data)):
         dx = series.time[i] - series.time[i-t_diff]
         dy = series.data[i] - series.data[i-t_diff]
@@ -83,8 +86,8 @@ def neo(series, win):
 
 def aso(series, win):
     o = Timeseries(series.name + " ASO")
-    o.f_Hz = series.f_Hz
-    t_diff = int(o.f_Hz*win)
+    o.params[TS_PARAMS_F_HZ] = series.params[TS_PARAMS_F_HZ]
+    t_diff = int(o.params[TS_PARAMS_F_HZ]*win)
     for i in range(1,len(series.data)):
         dx = series.time[i] - series.time[i-t_diff]
         dy = series.data[i] - series.data[i-t_diff]
@@ -95,8 +98,8 @@ def aso(series, win):
 
 def as2o(series, win):
     o = Timeseries(series.name + " AS2O")
-    o.f_Hz = series.f_Hz
-    t_diff = int(o.f_Hz*win) if o.f_Hz != 0 else win
+    o.params[TS_PARAMS_F_HZ] = series.params[TS_PARAMS_F_HZ]
+    t_diff = int(o.params[TS_PARAMS_F_HZ]*win) if o.params[TS_PARAMS_F_HZ] != 0 else win
     for i in range(t_diff,len(series.data)):
         dx = series.time[i] - series.time[i-t_diff]
         dy = series.data[i] - series.data[i-t_diff]
@@ -107,8 +110,8 @@ def as2o(series, win):
 
 def needle(series, win):
     o = Timeseries(series.name + " needle'd")
-    o.f_Hz = series.f_Hz
-    t_diff = int(o.f_Hz*win) if o.f_Hz != 0 else win
+    o.params[TS_PARAMS_F_HZ] = series.params[TS_PARAMS_F_HZ]
+    t_diff = int(o.params[TS_PARAMS_F_HZ]*win) if o.params[TS_PARAMS_F_HZ] != 0 else win
     k = Timeseries("inflections")
     d = []
     d.append(0)
@@ -137,7 +140,7 @@ def ac_couple(series, win):
 
 def mean_sub(series, win):
     o = Timeseries(series.name + " Mean")
-    o.f_Hz = series.f_Hz
+    o.params = series.params
     for i in range(win,len(series.time)):
         m = np.average(series.data[i-win:i])
         o.data.append( series.data[i] - m )
@@ -146,7 +149,7 @@ def mean_sub(series, win):
 
 def pseudo_mean(series, bits):
     o = Timeseries(series.name + " pMean")
-    o.f_Hz = series.f_Hz
+    o.params = series.params
     m = int(series.data[0])
     mb = int(series.data[0]) << bits
     for i in range(len(series.time)):
@@ -158,7 +161,7 @@ def pseudo_mean(series, bits):
 
 def lpf_butter(series, cutoff, order):
     o = Timeseries(series.name + " LPF")
-    o.f_Hz = series.f_Hz
+    o.params = series.params
     normal_cutoff = 2/cutoff
     b, a = butter(order, normal_cutoff, btype='low', analog=False)
     o.data = filtfilt(b, a, series.data)
@@ -177,8 +180,8 @@ def butter_bandpass(lowcut, highcut, fs, order=4):
 # Function to apply a Butterworth filter to a signal
 def bpf_butter(series, lowcut, highcut, order=4):
     o = Timeseries(series.name + " BPF")
-    o.f_Hz = series.f_Hz
-    b, a = butter_bandpass(lowcut, highcut, o.f_Hz, order=order)
+    o.params = series.params
+    b, a = butter_bandpass(lowcut, highcut, o.params[TS_PARAMS_F_HZ], order=order)
     o.data = filtfilt(b, a, series.data)
     o.time = series.time
     return o
@@ -188,7 +191,7 @@ def bpf_butter(series, lowcut, highcut, order=4):
 def norm(series, bits):
     o = Timeseries(series.name + " Norm")
     o.time = series.time
-    o.f_Hz = series.f_Hz
+    o.params = series.params
     sorted = np.abs(series.data)
     sorted.sort()
     maxs = sorted[-10:]
@@ -204,12 +207,12 @@ def norm(series, bits):
     return o
 
 def add_offset(series, offset):
-    o = Timeseries( f"{series.name} offset {offset}", data = np.array(series.data) + offset, time = series.time, f_Hz = series.f_Hz)
+    o = Timeseries( f"{series.name} offset {offset}", data = np.array(series.data) + offset, time = series.time, f_Hz = series.params[TS_PARAMS_F_HZ])
     return o
 
 def offset_to_pos_and_map(series, bits):
-    o = Timeseries(series.name + " map abs", time = series.time, f_Hz = series.f_Hz)
-    o.sample_b = bits
+    o = Timeseries(series.name + " map abs", time = series.time, f_Hz = series.params[TS_PARAMS_F_HZ])
+    o.params[TS_PARAMS_SAMPLE_B] = bits
     # Push everything above 0
     minv = min(series.data)
     if minv < 0:
@@ -231,7 +234,8 @@ def offset_to_pos_and_map(series, bits):
 def quant(series, bits):
     o = Timeseries(series.name + f" Q({bits})")
     o.time = series.time
-    o.f_Hz = series.f_Hz
+    o.params = series.params
+    o.params[ TS_PARAMS_SAMPLE_B ] = bits
     sorted = np.abs(series.data)
     sorted.sort()
     maxs = sorted[-10:]
@@ -292,11 +296,11 @@ def spike_det_lc(series, dt, count):
 
 
 def oversample(series, order):
-    o = Timeseries(f"Sx{order}", f_Hz = series.f_Hz*order)
+    o = Timeseries(f"Sx{order}", f_Hz = series.params[TS_PARAMS_F_HZ]*order)
     f = interpolate.interp1d(series.time, series.data)
-    num_points = int((series.time[-1] - series.time[0]) * o.f_Hz) + 1
+    num_points = int((series.time[-1] - series.time[0]) * o.params[TS_PARAMS_F_HZ]) + 1
     o.time = np.linspace( series.time[0], series.time[-1], num_points )
-    o.length_s = max(o.time)
+    o.params[TS_PARAMS_LENGTH_S] = max(o.time)
     o.data = f(o.time)
     return o
 
@@ -333,11 +337,11 @@ def compute_sdr(original_signal, new_signal, interpolate=False):
 def add_noise(series, drop_rate_dBpdec=-3, initial_magnitude=100, line_magnitude=0.1):
     o = Timeseries("Noisy signal")
     o.time = series.time
-    o.f_Hz = series.f_Hz
+    o.params[TS_PARAMS_F_HZ] = series.params[TS_PARAMS_F_HZ]
 
     # Generate random noise with desired characteristics
     num_samples = len(series.data)
-    freqs       = np.fft.fftfreq(num_samples, 1/series.f_Hz)
+    freqs       = np.fft.fftfreq(num_samples, 1/series.params[TS_PARAMS_F_HZ])
     magnitude   = initial_magnitude / (1 + (freqs / 1)**2)**(abs(drop_rate_dBpdec) / 20)  # Magnitude with drop rate
     phase       = np.random.uniform(0, 2*np.pi, num_samples)  # Random phase
     spectrum    = magnitude * np.exp(1j * phase)
@@ -348,6 +352,10 @@ def add_noise(series, drop_rate_dBpdec=-3, initial_magnitude=100, line_magnitude
     total_noise = noise + sinusoidal_noise
     # Add noise to the original signal
     o.data = series.data + total_noise
+
+    o.params[TS_PARAMS_NOISE_DROP_RATE_DBPDEC]  = drop_rate_dBpdec
+    o.params[TS_PARAMS_NOISE_DC_COMP]           = initial_magnitude
+
     return o
 
 def normalize( series):
@@ -356,6 +364,7 @@ def normalize( series):
                     data = np.array(series.data)*factor,
                     time = series.time
                     )
+    o.params[TS_PARAMS_AMPL_RANGE] = [0,1]
     return o, factor
 
 def scale( series, factor ):
