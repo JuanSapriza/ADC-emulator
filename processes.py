@@ -140,7 +140,7 @@ def ac_couple(series, win):
 
 def mean_sub(series, win):
     o = Timeseries(series.name + " Mean")
-    o.params = series.params
+    o.params.update(series.params)
     for i in range(win,len(series.time)):
         m = np.average(series.data[i-win:i])
         o.data.append( series.data[i] - m )
@@ -149,7 +149,7 @@ def mean_sub(series, win):
 
 def pseudo_mean(series, bits):
     o = Timeseries(series.name + " pMean")
-    o.params = series.params
+    o.params.update(series.params)
     m = int(series.data[0])
     mb = int(series.data[0]) << bits
     for i in range(len(series.time)):
@@ -161,7 +161,7 @@ def pseudo_mean(series, bits):
 
 def lpf_butter(series, cutoff, order):
     o = Timeseries(series.name + " LPF")
-    o.params = series.params
+    o.params.update(series.params)
     normal_cutoff = 2/cutoff
     b, a = butter(order, normal_cutoff, btype='low', analog=False)
     o.data = filtfilt(b, a, series.data)
@@ -180,7 +180,7 @@ def butter_bandpass(lowcut, highcut, fs, order=4):
 # Function to apply a Butterworth filter to a signal
 def bpf_butter(series, lowcut, highcut, order=4):
     o = Timeseries(series.name + " BPF")
-    o.params = series.params
+    o.params.update(series.params)
     b, a = butter_bandpass(lowcut, highcut, o.params[TS_PARAMS_F_HZ], order=order)
     o.data = filtfilt(b, a, series.data)
     o.time = series.time
@@ -191,7 +191,7 @@ def bpf_butter(series, lowcut, highcut, order=4):
 def norm(series, bits):
     o = Timeseries(series.name + " Norm")
     o.time = series.time
-    o.params = series.params
+    o.params.update(series.params)
     sorted = np.abs(series.data)
     sorted.sort()
     maxs = sorted[-10:]
@@ -212,6 +212,7 @@ def add_offset(series, offset):
 
 def offset_to_pos_and_map(series, bits):
     o = Timeseries(series.name + " map abs", time = series.time, f_Hz = series.params[TS_PARAMS_F_HZ])
+    o.params.update(series.params)
     o.params[TS_PARAMS_SAMPLE_B] = bits
     # Push everything above 0
     minv = min(series.data)
@@ -234,7 +235,7 @@ def offset_to_pos_and_map(series, bits):
 def quant(series, bits):
     o = Timeseries(series.name + f" Q({bits})")
     o.time = series.time
-    o.params = series.params
+    o.params.update(series.params)
     o.params[ TS_PARAMS_SAMPLE_B ] = bits
     sorted = np.abs(series.data)
     sorted.sort()

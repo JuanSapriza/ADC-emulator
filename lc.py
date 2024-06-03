@@ -8,6 +8,19 @@
 from timeseries import *
 from processes import *
 
+TS_PARAMS_LC_LVLS           = "LC levels"
+TS_PARAMS_LC_LVL_W_FRACT    = "LC level width by fraction"
+TS_PARAMS_LC_LVL_W_B        = "LC level width by bits"
+TS_PARAMS_LC_STRAT          = "LC strategy"
+TS_PARAMS_LC_ACQ_AMP_B      = "LC Acquisition word size of Amplitude"
+TS_PARAMS_LC_ACQ_DIR_B      = "LC Acquisition word size of Direction"
+TS_PARAMS_LC_ACQ_TIME_B     = "LC Acquisition word size of Time"
+TS_PARAMS_LC_ACQ_AMP_STRAT  = "LC Acquisition strategy amplitude"
+TS_PARAMS_LC_ACQ_DIR_STRAT  = "LC Acquisition strategy direction"
+TS_PARAMS_LC_ACQ_TIME_STRAT = "LC Acquisition strategy time"
+TS_PARAMS_LC_ACQ_F_HZ       = "LC Acquisition ~ frequency"
+
+
 def first_level(lvls):
     return int( np.floor( len(lvls)/2 ) )
 
@@ -180,6 +193,8 @@ def lcadc_fil(series, lvls):
 
 def lcadc_naive(series, lvls):
     o = Timeseries(series.name + f" LCnaive({lvls[1]-lvls[0]})")
+    o.params.update(series.params)
+    o.params[ TS_PARAMS_LC_LVLS ] = lvls
     first =  first_level(lvls)
     c = Comparator()
     c.ptr = first
@@ -200,19 +215,11 @@ def lcadc_naive(series, lvls):
     o.time = c.diffd.time
     return o
 
-def lcadc_simple( series, lvl_width ):
+def lcadc_simple( series, lvls ):
+    lvl_width = lvls[1]-lvls[0]
     o = Timeseries( "LC simple" )
-    current_level   = np.floor(series.data[0]/lvl_width)
-    for i in range(1, len(series.data)):
-        diff =  np.floor((series.data[i] - current_level*lvl_width)/lvl_width)
-        if diff != 0:
-            o.data.append(np.sign(diff))
-            o.time.append( series.time[i] )
-            current_level = current_level + np.sign(diff)
-    return o
-
-def lcadc_simple_debounce( series, lvl_width ):
-    o = Timeseries( "LC simple" )
+    o.params[ TS_PARAMS_LC_LVLS ] = lvls
+    o.params.update(series.params)
     current_level   = np.floor(series.data[0]/lvl_width)
     for i in range(1, len(series.data)):
         diff =  np.trunc(((series.data[i] - current_level*lvl_width)/lvl_width)).astype(int)
@@ -225,12 +232,13 @@ def lcadc_simple_debounce( series, lvl_width ):
 
 def lcadc_reconstruct(series, lvls, offset=0):
     o = Timeseries(series.name + " LCrec")
+    o.params.update(series.params)
     first = first_level(lvls)
     lvl = first + offset
     o.time.append(series.time[0])
     o.data.append(0)
     for i in range(1, len(series.data)):
-        o.time.append( o.time[i-1] + series.time[i] )
+        o.time.append( o.time[i-1] + series.time[i] +1 )
         lvl = int(min( max(0, lvl + series.data[i] ), len(lvls) -1 ))
         o.data.append( lvls[lvl] )
     return o
@@ -329,8 +337,10 @@ def lc_task_detect_spike_online( series, length = 10, dt = 0.0025 ):
 
 def lc_subsampler_C( series, lvl_w_b ):
     o = Timeseries("LC in C")
-    lvl_w = 2**lvl_w_b
+    o.params.update(series.params)
+    o.params[ TS_PARAMS_LC_LVLS ] = list(range( 0, 2**series.params[TS_PARAMS_SAMPLE_B], 2**lvl_w_b ) )
 
+    lvl_w = 2**lvl_w_b
     current_lvl = 0                     # The last level to be crossed.
     lvl_up, lvl_down = 0, 0            # The value to be crossed to consider that a level was crossed.
     x_up, x_down = False, False         # Whether the sample crossed the upper or lower level
@@ -341,8 +351,8 @@ def lc_subsampler_C( series, lvl_w_b ):
 
     MAX_VAL = 2**16
     MIN_VAL = 0
-    MAX_SKIP = 127
-    MAX_XING = 255
+    MAX_SKIP = 65535
+    MAX_XING = 65535
 
     for i in range( len(series.data) ):
         dir = 0  # Reset the direction signal
@@ -410,14 +420,18 @@ def lc_subsampler_C( series, lvl_w_b ):
                 continue
             break
 
-    return o
+    # Average acquisition rate over the sampled period
+    o.params[TS_PARAMS_LC_ACQ_F_HZ] = len(o.data)/series.params[TS_PARAMS_LENGTH_S]
+    return o.copy()
 
 
 
 
 
-def lc_subsampler( series, lvl_w_b, time_in_skips = False ):
+def lc_subsampler( series, lvl_w_b, time_in_skips = True ):
     o = Timeseries(series.name + f" LCsubs({lvl_w_b})")
+    o.params.update(series.params)
+    o.params[ TS_PARAMS_LC_LVLS ] = list(range( 0, 2**series.params[TS_PARAMS_SAMPLE_B], 2**lvl_w_b ) )
 
     lvl_width     = 2**lvl_w_b
     current_lvl   = ((series.data[0]) // lvl_width)*lvl_width
@@ -433,14 +447,14 @@ def lc_subsampler( series, lvl_w_b, time_in_skips = False ):
         if diff != 0:
             o.data.append(diff)
             if time_in_skips:
-                o.time.append( i - last_crossing )
+                o.time.append( i - last_crossing  -1)
                 last_crossing = i
             else:
                 o.time.append( (series.time[i] - sum(o.time[ : len(o.time) ])) )
             current_lvl = max( 0, current_lvl + diff*lvl_width)
 
     # Average acquisition rate over the sampled period
-    o.params[TS_PARAMS_F_HZ] = len(o.data)/series.params[TS_PARAMS_LENGTH_S]
+    o.params[TS_PARAMS_LC_ACQ_F_HZ] = len(o.data)/series.params[TS_PARAMS_LENGTH_S]
 
     return o
 

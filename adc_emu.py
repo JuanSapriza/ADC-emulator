@@ -98,7 +98,7 @@ class ADC:
         self.latency_s      = 0             # Not yet used
         self.energy_J       = 0
         self.power_avg_W    = 0
-        self.conversion     = Timeseries(f"ADC {self.name}")
+        self.conversion     = None
         if series != None: self.feed(series)
 
 
@@ -124,7 +124,7 @@ class ADC:
                                     data        = series.data,
                                     time        = series.time
                                     )
-        self.conversion.params = series.params
+        self.conversion.params.update(series.params)
         self.conversion.params[TS_PARAMS_EPC_J] = self.epc_J
 
     def measEnergy(self, series: Timeseries ):
@@ -142,7 +142,7 @@ class ADC:
         o = Timeseries("resampled")
         o.data = resampled_data
         o.time = timestamps
-        o.params = series.params
+        o.params.update(series.params)
         o.params[TS_PARAMS_F_HZ] = f_Hz
         return o
 
@@ -153,7 +153,7 @@ class ADC:
 
         o = Timeseries(series.name + f" Clipped({self.dynRange[0]},{self.dynRange[1]})")
         o.time = series.time
-        o.params = series.params
+        o.params.update(series.params)
         for s in series.data:
             d = s
             if s < self.dynRange[0]:
@@ -175,8 +175,8 @@ class ADC:
         if self.dynRange[0] >= self.dynRange[1]:
             raise ValueError("The Dynamic Range should be defined as [Lower bound, Upper bound] and these should be different.")
         o = Timeseries(series.name + f" Q({self.res_b})")
+        o.params.update(series.params)
         o.time                          = series.time
-        o.params                        = series.params
         o.params[TS_PARAMS_SAMPLE_B]    = self.res_b
         if self.signed:
             for s  in series.data:

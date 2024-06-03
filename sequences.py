@@ -1,5 +1,9 @@
-import itertools
 
+
+
+
+import itertools
+from timeseries import *
 
 class Step()    :
     def __init__(self, name, operation, params_list_dict ):
@@ -19,23 +23,31 @@ class Step()    :
         self.outputs_count      = len(self.params_list)
         print(f"Populated {self.name} and would generate {self.outputs_count} outputs")
 
-    def run(self):
+    def run(self, count=0):
         for in_signal in self.inputs:
             for params in self.params_list:
                 self.outputs.append( self.operation( in_signal, params ) )
+                self.outputs[-1].params[ TS_PARAMS_STEP_HISTORY ].append(self.name)
+                self.outputs[-1].params[ TS_PARAMS_INPUT_SERIES ]   = in_signal
+                self.outputs[-1].params[ TS_PARAMS_OPERATION ]      = self.operation
+                print(f"\r{count}", end=" ")
+                count += 1
+        return count
 
-    def init(self, inputs ):
+    def init(self, inputs, count ):
         self.inputs = inputs
-        self.run()
+        self.run( count )
+        return count
 
 
 
 
-def run_steps_recursive( parent ):
+def run_steps_recursive( parent, count=0 ):
     for child in parent.children_steps:
         child.inputs = parent.outputs
-        child.run()
-        if child.children_steps != []: run_steps_recursive( child )
+        count = child.run(count)
+        if child.children_steps != []: count = run_steps_recursive( child, count )
+    return count
 
 
 def get_last_generation_recursive( parent, last_gen_list ):
