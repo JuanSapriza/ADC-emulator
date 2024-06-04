@@ -41,21 +41,30 @@ class Step()    :
 
 
 
+def run_steps( step, initial_signals ):
 
-def run_steps_recursive( parent, count=0 ):
-    for child in parent.children_steps:
-        child.inputs = parent.outputs
-        count = child.run(count)
-        if child.children_steps != []: count = run_steps_recursive( child, count )
-    return count
-
-
-def get_last_generation_recursive( parent, last_gen_list ):
-    if parent.children_steps == []:
-        last_gen_list.append(parent)
-    else:
+    def run_steps_recursive( parent, count=0 ):
         for child in parent.children_steps:
-            get_last_generation_recursive( child, last_gen_list )
+            child.inputs = parent.outputs
+            count = child.run(count)
+            if child.children_steps != []: count = run_steps_recursive( child, count )
+        return count
+
+    count = 0
+    count = step.init( initial_signals, count )
+    run_steps_recursive( step, count )
+    print("\rDone!\n")
+
+def get_last_outputs( step ):
+    def get_last_generation_recursive( parent, last_gen_list ):
+        if parent.children_steps == []:
+            last_gen_list.extend(parent.outputs)
+        else:
+            for child in parent.children_steps:
+                get_last_generation_recursive( child, last_gen_list )
+    last_gen = []
+    get_last_generation_recursive( step, last_gen )
+    return last_gen
 
 def populate_recursive( parent ):
     parent.populate()
@@ -79,4 +88,18 @@ def get_output_count_recursive( parent ):
 def operation_buffer( series, params ):
     return series
 
+def filter_timeseries(timeseries_list, params_dict):
+    def matches_params(timeseries, params_dict):
+        for key, value in params_dict.items():
+            if isinstance(value, list):
+                # Check if any of the values in the list match the timeseries params
+                if key not in timeseries.params or not any(item in timeseries.params[key] for item in value):
+                    return False
+            else:
+                # Check if the single value matches the timeseries params
+                if key not in timeseries.params or timeseries.params[key] != value:
+                    return False
+        return True
 
+    filtered_timeseries = [ts for ts in timeseries_list if matches_params(ts, params_dict)]
+    return filtered_timeseries
