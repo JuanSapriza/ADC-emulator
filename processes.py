@@ -297,13 +297,15 @@ def spike_det_lc(series, dt, count):
 
 
 def oversample(series, order):
-    o = Timeseries(f"Sx{order}", f_Hz = series.params[TS_PARAMS_F_HZ]*order)
+    o = Timeseries(f"Sx{order}" )
+    o.params.update( series.params )
+    o.params[TS_PARAMS_F_HZ] = series.params[TS_PARAMS_F_HZ]*order
     f = interpolate.interp1d(series.time, series.data)
     num_points = int((series.time[-1] - series.time[0]) * o.params[TS_PARAMS_F_HZ]) + 1
     o.time = np.linspace( series.time[0], series.time[-1], num_points )
-    o.params[TS_PARAMS_LENGTH_S] = max(o.time)
+    # o.params[TS_PARAMS_LENGTH_S] = max(o.time)?
     o.data = f(o.time)
-    return o
+    return o.copy()
 
 
 

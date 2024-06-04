@@ -184,7 +184,7 @@ class ADC:
                 o.data.append(d)
         else:
             for s  in series.data:
-                d = int(approximation( (2**self.res_b)*( s + self.dynRange[1])/(self.dynRange[1]-self.dynRange[0]) ))
+                d = int(approximation( (2**self.res_b)* s/(self.dynRange[1]-self.dynRange[0]) ))
                 o.data.append(d)
         return o
 
