@@ -267,11 +267,13 @@ time - The number of samples skipped
 def lcadc_fraction( series, lvl_w_fraction ):
     lvl_w = series.params[TS_PARAMS_AMPL_RANGE][1]/lvl_w_fraction
     lvls = list( np.arange(series.params[TS_PARAMS_AMPL_RANGE][0], series.params[TS_PARAMS_AMPL_RANGE][1], lvl_w ) )
-    o = Timeseries( "LC simple" )
+    o = Timeseries( "LC fraction" )
     o.params.update(series.params)
     o.params[ TS_PARAMS_LC_LVLS ] = lvls
     current_level   = np.trunc(series.data[0]/lvl_w) # Level number in the list.
     last_sample = 0
+    o.data.append(0)
+    o.time.append(0)
     for i in range(1, len(series.data)):
         diff =  np.trunc(((series.data[i] - current_level*lvl_w)/lvl_w)).astype(int)
         if diff != 0:
@@ -279,7 +281,7 @@ def lcadc_fraction( series, lvl_w_fraction ):
             current_level = current_level + np.sign(diff)
             o.time.append( i - last_sample -1 )
             last_sample = i
-    return o
+    return o.copy()
 
 '''
 Reconstructs a LC'd signal
@@ -293,18 +295,19 @@ data - Absolute amplitude
 time - Absolute time (assuming that series.params[TS_PARAMS_F_HZ] contains the original signal's sampling frequency
 
 '''
-def lcadc_reconstruct(series, lvls, start_lvl, start_time, end_time ):
+def lcadc_reconstruct(series, lvls, start_lvl, start_time_s, end_time_s ):
     o = Timeseries(series.name + " LCrec")
     o.params.update(series.params)
     lvl = start_lvl
-    o.time.append(start_time)
-    o.data.append(lvls[lvl])
-    for i in range(0, len(series.data)):
+    lvl = int(min( max(0, lvl + series.data[0] ), len(lvls) -1 ))
+    o.data.append( lvls[lvl] )
+    o.time.append(start_time_s)
+    for i in range(1, len(series.data)):
         o.time.append( o.time[-1] + ( (series.time[i]+1) /series.params[TS_PARAMS_F_HZ] ))
         lvl = int(min( max(0, lvl + series.data[i] ), len(lvls) -1 ))
         o.data.append( lvls[lvl] )
     o.data.append(lvls[lvl])
-    o.time.append(end_time)
+    o.time.append(end_time_s)
     return o
 
 '''
@@ -318,10 +321,10 @@ Returns:
 data - Number of levels crossed
 time - Absolute time (assuming that series.params[TS_PARAMS_F_HZ] contains the original signal's sampling frequency
 '''
-def lcadc_reconstruct_arrows( series, start_time ):
+def lcadc_reconstruct_arrows( series, start_time_s ):
     o = Timeseries(series.name + " LCrecTime")
     o.params.update(series.params)
-    o.time.append(start_time)
+    o.time.append(start_time_s)
     o.data.append(series.data[0])
     for i in range(1, len(series.data)):
         o.time.append( o.time[-1] + ( (series.time[i]+1) /series.params[TS_PARAMS_F_HZ] ))
@@ -329,9 +332,9 @@ def lcadc_reconstruct_arrows( series, start_time ):
     return o
 
 
-def lc_task_detect_spike( series, length = 10, dt = 0.025 ):
+def lc_task_detect_spike( series, length = 10, dt_s = 0.025 ):
     data = series.data[1:]
-    time = series.time[1:]
+    time = np.array(series.time[1:])/series.params[TS_PARAMS_F_HZ]
 
     switch_indexes  = []
     current_value   = data[0]
@@ -344,36 +347,37 @@ def lc_task_detect_spike( series, length = 10, dt = 0.025 ):
             count       = count + 1 if count < length else count
             accum_time  = accum_time + time[i] if count < length else accum_time + time[i] - time[ i-length ]
         else:
-            one_way = 1 if (count == length and accum_time <= dt) else 0
+            one_way = 1 if (count == length and accum_time <= dt_s) else 0
             current_value, accum_time, count = data[i], 0, 0
 
-        if count == length and accum_time <= dt and one_way == 1:
+        if count == length and accum_time <= dt_s and one_way == 1:
             current_value, accum_time, count = data[i], 0, 0
             switch_indexes.append(i - length + 2)
 
     return switch_indexes
 
-def lc_task_detect_spike_online( series, length = 10, dt = 0.0025 ):
+def lc_task_detect_spike_online( series, start_time_s = 0, length = 10, dt_s = 0.0025 ):
     o = Timeseries(series.name + " LC R-peak detection")
     o.params.update(series.params)
     data = series.data[1:]
-    time = series.time[1:]
+    time = (np.array(series.time[1:])+1)/series.params[TS_PARAMS_F_HZ] # +1 because skipped=0 is still one more sample
     count = 0
     blocked = 0
 
     for i in range(length, len(data)):
-        # print(np.sign(data[i]) != np.sign(data[i-1]) or time[i] > dt, time[i] <= dt, count >= length)
-        if np.sign(data[i]) != np.sign(data[i-1]) or time[i] > dt:
+        # print(np.sign(data[i]) != np.sign(data[i-1]) or time[i] > dt_s, time[i] <= dt_s, count >= length)
+        if np.sign(data[i]) != np.sign(data[i-1]) or time[i] > dt_s:
+            count += abs(data[i-1])
             if count >= length:
                 if not blocked:
-                    o.time.append( sum( np.array(series.time[:i]) +1 ) ) # +1 because skipped=0 is still one more sample
+                    o.time.append( start_time_s + sum( np.array(time[:i]) ) )
                     count, blocked = 0, 1
                 else:
                     count, blocked = 0, 0
             else:
                 count = 0
-        if time[i] <= dt:
-            count += abs(data[i])
+        if time[i] <= dt_s:
+            count += abs(data[i-1])
     return o
 
 

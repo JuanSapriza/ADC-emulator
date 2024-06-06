@@ -3,7 +3,9 @@
 
 
 import itertools
+import time
 from timeseries import *
+from copy import deepcopy
 
 class Step()    :
     def __init__(self, name, operation, params_list_dict ):
@@ -15,6 +17,8 @@ class Step()    :
         self.inputs             = []
         self.outputs            = []
         self.outputs_count      = 0
+        self.latency            = 0
+        self.count              = 0
 
     def populate(self):
         keys                    = self.params_list_dict.keys()
@@ -26,17 +30,32 @@ class Step()    :
     def run(self, count=0):
         for in_signal in self.inputs:
             for params in self.params_list:
-                self.outputs.append( self.operation( in_signal, params ) )
-                self.outputs[-1].params[ TS_PARAMS_STEP_HISTORY ].append(self.name)
-                self.outputs[-1].params[ TS_PARAMS_INPUT_SERIES ]   = in_signal
-                self.outputs[-1].params[ TS_PARAMS_OPERATION ]      = self.operation
-                print(f"\r{count}", end=" ")
+                start_time = time.time()  # Capture start time
+                output = self.operation(in_signal, params)
+                end_time = time.time()    # Capture end time
+                latency = end_time - start_time
+
+                self.latency += latency
+                output.params[ TS_PARAMS_STEP_HISTORY ].append(self.name)
+                output.params[ TS_PARAMS_LATENCY_HISTORY ].append(latency)
+                output.params[ TS_PARAMS_INPUT_SERIES ]     = in_signal
+                output.params[ TS_PARAMS_OPERATION ]        = self.operation
+                self.outputs.append( output )
+
                 count += 1
+                self.count += 1
+                print(f"\r{count}", end=" ")
+                # print(f"{self.name} \t {count}\t({self.mycounts})")
+
         return count
+
+    def copy(self):
+        return deepcopy(self)
+
 
     def init(self, inputs, count ):
         self.inputs = inputs
-        self.run( count )
+        count = self.run( count )
         return count
 
 
@@ -103,3 +122,20 @@ def filter_timeseries(timeseries_list, params_dict):
 
     filtered_timeseries = [ts for ts in timeseries_list if matches_params(ts, params_dict)]
     return filtered_timeseries
+
+def get_all_steps_recursive(parent_step):
+    """
+    Recursively collect all steps starting from the parent step.
+
+    :param parent_step: The root step from which to start collecting.
+    :return: A list of all steps.
+    """
+    all_steps = []
+
+    def collect_steps(step):
+        all_steps.append(step)
+        for child in step.children_steps:
+            collect_steps(child)
+
+    collect_steps(parent_step)
+    return all_steps

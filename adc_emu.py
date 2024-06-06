@@ -178,6 +178,7 @@ class ADC:
         o.params.update(series.params)
         o.time                          = series.time
         o.params[TS_PARAMS_SAMPLE_B]    = self.res_b
+        o.params[TS_PARAMS_AMPL_RANGE]  = [0,2**self.res_b-1 ] if not self.signed else [-2**(self.res_b-1),2**(self.res_b-1)-1 ]
         if self.signed:
             for s  in series.data:
                 d = int(approximation( (2**self.res_b-1) * s/(self.dynRange[1]-self.dynRange[0]) ))

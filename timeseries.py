@@ -8,18 +8,20 @@ import numpy as np
 from copy import deepcopy
 import pickle
 
-TS_PARAMS_F_HZ          = "Frequency (Hz)"
-TS_PARAMS_SAMPLE_B      = "Size per sample (bits)"
-TS_PARAMS_LENGTH_S      = "Length (s)"
-TS_PARAMS_PHASE_DEG     = "Sampling phase (°)"
-TS_PARAMS_OFFSET_B      = "Input signal offset (bits)"
-TS_PARAMS_POWER_W       = "Sampling power (W)"
-TS_PARAMS_EPC_J         = "Energy per conversion (J)"
-TS_PARAMS_STEP_HISTORY  = "Step history"
-TS_PARAMS_AIDI          = "AIDI"
+TS_PARAMS_F_HZ              = "Frequency (Hz)"
+TS_PARAMS_SAMPLE_B          = "Size per sample (bits)"
+TS_PARAMS_LENGTH_S          = "Length (s)"
+TS_PARAMS_PHASE_DEG         = "Sampling phase (°)"
+TS_PARAMS_OFFSET_B          = "Input signal offset (bits)"
+TS_PARAMS_POWER_W           = "Sampling power (W)"
+TS_PARAMS_EPC_J             = "Energy per conversion (J)"
+TS_PARAMS_STEP_HISTORY      = "Step history"
+TS_PARAMS_LATENCY_HISTORY   = "Latency history"
+TS_PARAMS_AIDI              = "AIDI"
+TS_PARAMS_DR_BPS            = "Datarate (bps)"
 
-TS_PARAMS_INPUT_SERIES  = "Input series"
-TS_PARAMS_OPERATION     = "Operation"
+TS_PARAMS_INPUT_SERIES      = "Input series"
+TS_PARAMS_OPERATION         = "Operation"
 
 class Timeseries:
     def __init__(self,
@@ -44,9 +46,10 @@ class Timeseries:
             length_s = len(time)/f_Hz
 
         self.params = {
-            TS_PARAMS_F_HZ          : f_Hz,
-            TS_PARAMS_LENGTH_S      : length_s,
-            TS_PARAMS_STEP_HISTORY  : [],
+            TS_PARAMS_F_HZ              : f_Hz,
+            TS_PARAMS_LENGTH_S          : length_s,
+            TS_PARAMS_STEP_HISTORY      : [],
+            TS_PARAMS_LATENCY_HISTORY   : [],
         }
 
         self.time       = time if time is not None else []
@@ -90,6 +93,16 @@ class Timeseries:
 
     def copy(self):
         return deepcopy(self)
+
+    def print_params(self):
+        for k, v in self.params.items():
+            print(f"{k}\t{v}")
+
+    def min_bits_required(self):
+        try: max_d, max_t = int(max(self.data)), int(max(self.time))
+        except: return 0,0
+        d_b, t_b        = max_d.bit_length(), max_t.bit_length()
+        return d_b, t_b
 
 def copy_series( series ):
     return deepcopy( series)
