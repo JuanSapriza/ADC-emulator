@@ -4,313 +4,498 @@
 #
 # Author: Juan Sapriza - juan.sapriza@epfl.ch
 
-from scipy.signal import butter,filtfilt
-from scipy import interpolate, signal
+from scipy.signal import butter, filtfilt
+from scipy import interpolate
 import numpy as np
 
 from timeseries import *
 
-TS_PARAMS_AMPL_RANGE                = "Amplitude range"
-TS_PARAMS_NOISE_DROP_RATE_DBPDEC    = "Noise drop rate (dB/dec)"
-TS_PARAMS_NOISE_DC_COMP             = "DC component (???)"
-
-class Process:
-    def __init__(self, process, *args):
-        self.process = process
-        self.args = args
-
-class Signal:
-    def __init__(self, series: Timeseries):
-        self.series     = series
-        self.processes  = []
-        self.steps      = [series]
-
-    def add_process(self, process, *args ):
-        self.processes.append(Process(process, *args))
-
-    def apply_process(self, process, *args):
-        self.steps.append(process(self.series,*args))
-
+TS_PARAMS_AMPL_RANGE = "Amplitude range"
+TS_PARAMS_NOISE_DROP_RATE_DBPDEC = "Noise drop rate (dB/dec)"
+TS_PARAMS_NOISE_DC_COMP = "DC component (???)"
 
 def pas(series, e):
     '''
-    Implement a PAS
+    Implement a Polygonal Approximator.
+
+    Args:
+        series (Timeseries): Input time series.
+        e (float): Error threshold for compression.
+
+    Returns:
+        Timeseries: Polygonally approximated time series.
     '''
     data = series.data
     time = series.time
-    dx  = 1 # Time differential
-    i   = 1 # Sample index
-    f   = 0 # Cost function
-    x   = 0 # Time sample
-    y   = 0 # Value sample
-    t_  = 0 # Time of the previous fiducial point
-    p   = 0 # Time of a peak
-    l   = 0 # Length
-    o = Timeseries(series.name + " PAS") # Output array
-    for i in range(1,len(time)):
-        dy = data[i] - data[i-1]
+    dx = 1  # Time differential
+    f = 0  # Cost function
+    x = 0  # Time sample
+    y = 0  # Value sample
+    t_ = 0  # Time of the previous fiducial point
+    p = 0  # Time of a peak
+    l = 0  # Length
+    o_data = []  # Output data
+    o_time = []  # Output time
+
+    for i in range(1, len(time)):
+        dy = data[i] - data[i - 1]
         x += dx
         y += dy
-        f = f + x*dx + y*dy
+        f = f + x * dx + y * dy
         displ = abs(y) + x
         if displ < l and p == 0:
-            p += i - 1
+            p = i - 1
         l = displ
-        if abs(f) > e: # ToDo: Maybe adjust e to reach a certain level of compression?
-            if p == 0:
-                t = i -1
-            else:
-                t= p
-            o.data.append( data[t] )
-            o.dx = t - t_# This is the value that would be saved
-            o.time.append( time[t] )
+        if abs(f) > e:  # ToDo: Maybe adjust e to reach a certain level of compression?
+            t = i - 1 if p == 0 else p
+            o_data.append(data[t])
+            o_time.append(time[t])
             f = 0
             p = 0
-            x = (i-t)*dx
+            x = (i - t) * dx
             y = data[i] - data[t]
             t_ = t
             l = abs(y) + x
-    return o
+
+    o = Timeseries(series.name + " PAS")
+    o.data = np.array(o_data)
+    o.time = np.array(o_time)
+    return o.copy()
 
 def neo(series, win):
+    '''
+    NEO operator.
+
+    Args:
+        series (Timeseries): Input time series.
+        win (float): Window size.
+
+    Returns:
+        Timeseries: Time series after NEO operation.
+    '''
     o = Timeseries(series.name + " NEO")
     o.params[TS_PARAMS_F_HZ] = series.params[TS_PARAMS_F_HZ]
-    t_diff = int(o.params[TS_PARAMS_F_HZ]*win)
-    for i in range(t_diff,len(series.data)):
-        dx = series.time[i] - series.time[i-t_diff]
-        dy = series.data[i] - series.data[i-t_diff]
-        dydx = dy/dx
-        o.data.append( dydx**2 - series.data[i]*dydx )
-        o.time.append( series.time[i] )
-    return o
+    t_diff = int(o.params[TS_PARAMS_F_HZ] * win)
+    o_data = []
+    o_time = []
+
+    for i in range(t_diff, len(series.data)):
+        dx = series.time[i] - series.time[i - t_diff]
+        dy = series.data[i] - series.data[i - t_diff]
+        dydx = dy / dx
+        neo_value = dydx**2 - series.data[i] * dydx
+        o_data.append(neo_value)
+        o_time.append(series.time[i])
+
+    o.data = np.array(o_data)
+    o.time = np.array(o_time)
+    return o.copy()
 
 def aso(series, win):
+    '''
+    Amplitude Slope Operator (ASO).
+
+    Args:
+        series (Timeseries): Input time series.
+        win (float): Window size.
+
+    Returns:
+        Timeseries: Time series after ASO operation.
+    '''
     o = Timeseries(series.name + " ASO")
     o.params[TS_PARAMS_F_HZ] = series.params[TS_PARAMS_F_HZ]
-    t_diff = int(o.params[TS_PARAMS_F_HZ]*win)
-    for i in range(1,len(series.data)):
-        dx = series.time[i] - series.time[i-t_diff]
-        dy = series.data[i] - series.data[i-t_diff]
-        dydx = dy/dx
-        o.data.append( series.data[i]*dydx )
-        o.time.append( series.time[i] )
-    return o
+    t_diff = int(o.params[TS_PARAMS_F_HZ] * win)
+    o_data = []
+    o_time = []
+
+    for i in range(1, len(series.data)):
+        dx = series.time[i] - series.time[i - t_diff]
+        dy = series.data[i] - series.data[i - t_diff]
+        dydx = dy / dx
+        aso_value = series.data[i] * dydx
+        o_data.append(aso_value)
+        o_time.append(series.time[i])
+
+    o.data = np.array(o_data)
+    o.time = np.array(o_time)
+    return o.copy()
 
 def as2o(series, win):
+    '''
+    Amplitude Slope Squared Operator (AS2O).
+
+    Args:
+        series (Timeseries): Input time series.
+        win (float): Window size.
+
+    Returns:
+        Timeseries: Time series after AS2O operation.
+    '''
     o = Timeseries(series.name + " AS2O")
     o.params[TS_PARAMS_F_HZ] = series.params[TS_PARAMS_F_HZ]
-    t_diff = int(o.params[TS_PARAMS_F_HZ]*win) if o.params[TS_PARAMS_F_HZ] != 0 else win
-    for i in range(t_diff,len(series.data)):
-        dx = series.time[i] - series.time[i-t_diff]
-        dy = series.data[i] - series.data[i-t_diff]
-        dydx = dy/dx
-        o.data.append( series.data[i]*dydx**2 )
-        o.time.append( series.time[i] )
-    return o
+    t_diff = int(o.params[TS_PARAMS_F_HZ] * win) if o.params[TS_PARAMS_F_HZ] != 0 else win
+    o_data = []
+    o_time = []
+
+    for i in range(t_diff, len(series.data)):
+        dx = series.time[i] - series.time[i - t_diff]
+        dy = series.data[i] - series.data[i - t_diff]
+        dydx = dy / dx
+        as2o_value = series.data[i] * dydx**2
+        o_data.append(as2o_value)
+        o_time.append(series.time[i])
+
+    o.data = np.array(o_data)
+    o.time = np.array(o_time)
+    return o.copy()
 
 def needle(series, win):
+    '''
+    Needle function to detect inflection points and compute corresponding values.
+
+    Args:
+        series (Timeseries): Input time series.
+        win (float): Window size.
+
+    Returns:
+        Timeseries: Processed time series.
+    '''
     o = Timeseries(series.name + " needle'd")
     o.params[TS_PARAMS_F_HZ] = series.params[TS_PARAMS_F_HZ]
-    t_diff = int(o.params[TS_PARAMS_F_HZ]*win) if o.params[TS_PARAMS_F_HZ] != 0 else win
+    t_diff = int(o.params[TS_PARAMS_F_HZ] * win) if o.params[TS_PARAMS_F_HZ] != 0 else win
     k = Timeseries("inflections")
-    d = []
-    d.append(0)
-    o.data.append(1)
-    o.time.append(0)
-    for j in range(1,len(series.data)):
-        d.append( 1 if series.data[j] - series.data[j-t_diff] > 0 else -1 )
-        if d[j]*d[j-1] < 0:
-            k.data.append( j-1 )
-    for i in range(1,len(k.data)):
-        dx = series.time[k.data[i]] - series.time[k.data[i-1]]
-        dy = series.data[ k.data[i] ] - series.data[ k.data[i-1] ]
-        o.data.append( (dy**2)/dx )
-        o.time.append( series.time[k.data[i]] )
-    return o
+
+    d = np.zeros(len(series.data))
+    d[0] = 0
+    o_data = [1]
+    o_time = [0]
+
+    for j in range(1, len(series.data)):
+        d[j] = 1 if series.data[j] - series.data[j - t_diff] > 0 else -1
+        if d[j] * d[j - 1] < 0:
+            k.data = np.append(k.data, j - 1)
+
+    for i in range(1, len(k.data)):
+        dx = series.time[int(k.data[i])] - series.time[int(k.data[i - 1])]
+        dy = series.data[int(k.data[i])] - series.data[int(k.data[i - 1])]
+        needle_value = (dy**2) / dx
+        o_data.append(needle_value)
+        o_time.append(series.time[int(k.data[i])])
+
+    o.data = np.array(o_data)
+    o.time = np.array(o_time)
+    return o.copy()
 
 def ac_couple(series, win):
-    if win == 0: return series
-    o = copy_series( series )
-    o.name += "AC coupled"
-    for i in range(win,len(series.time)):
-        m = np.average(series.data[i-win:i])
-        o.data.append( series.data[i] - m )
-        o.time.append( series.time[i] )
-    return o
+    '''
+    AC coupling function to remove DC offset.
+
+    Args:
+        series (Timeseries): Input time series.
+        win (int): Window size.
+
+    Returns:
+        Timeseries: AC coupled time series.
+    '''
+    if win == 0:
+        return series.copy()
+
+    o = Timeseries(series.name + " AC coupled")
+    o.params.update(series.params)
+    o_data = []
+    o_time = []
+
+    for i in range(win, len(series.time)):
+        m = np.mean(series.data[i - win:i])
+        ac_value = series.data[i] - m
+        o_data.append(ac_value)
+        o_time.append(series.time[i])
+
+    o.data = np.array(o_data)
+    o.time = np.array(o_time)
+    return o.copy()
 
 def mean_sub(series, win):
-    o = Timeseries(series.name + " Mean")
+    '''
+    Mean subtraction function to remove mean over a window.
+
+    Args:
+        series (Timeseries): Input time series.
+        win (int): Window size.
+
+    Returns:
+        Timeseries: Time series with mean subtracted.
+    '''
+    o = Timeseries(series.name + " Mean subtracted")
     o.params.update(series.params)
-    for i in range(win,len(series.time)):
-        m = np.average(series.data[i-win:i])
-        o.data.append( series.data[i] - m )
-        o.time.append( series.time[i] )
-    return o
+    o_data = []
+    o_time = []
+
+    for i in range(win, len(series.time)):
+        m = np.mean(series.data[i - win:i])
+        mean_sub_value = series.data[i] - m
+        o_data.append(mean_sub_value)
+        o_time.append(series.time[i])
+
+    o.data = np.array(o_data)
+    o.time = np.array(o_time)
+    return o.copy()
 
 def pseudo_mean(series, bits):
+    '''
+    Calculate pseudo mean for the input time series.
+
+    Args:
+        series (Timeseries): Input time series.
+        bits (int): Number of bits for scaling.
+
+    Returns:
+        Timeseries: Time series with pseudo mean calculated.
+    '''
     o = Timeseries(series.name + " pMean")
     o.params.update(series.params)
     m = int(series.data[0])
     mb = int(series.data[0]) << bits
+    o_data = []
+    o_time = []
+
     for i in range(len(series.time)):
-        mb = int(mb - m + series.data[i]) # m[i]xb = m[i-1]xb - m[i-1] + s[i]]
+        mb = int(mb - m + series.data[i])  # m[i]xb = m[i-1]xb - m[i-1] + s[i]]
         m = mb >> bits  # m[i] = m[i]xb /b
-        o.data.append( m )
-        o.time.append( series.time[i] )
-    return o
+        o_data.append(m)
+        o_time.append(series.time[i])
+
+    o.data = np.array(o_data)
+    o.time = np.array(o_time)
+    return o.copy()
 
 def lpf_butter(series, cutoff, order):
+    '''
+    Apply a low-pass Butterworth filter to the input time series.
+
+    Args:
+        series (Timeseries): Input time series.
+        cutoff (float): Cutoff frequency for the low-pass filter.
+        order (int): Order of the Butterworth filter.
+
+    Returns:
+        Timeseries: Low-pass filtered time series.
+    '''
     o = Timeseries(series.name + " LPF")
     o.params.update(series.params)
-    normal_cutoff = 2/cutoff
+
+    # Normalize the cutoff frequency with respect to the Nyquist frequency
+    nyquist = 0.5 * series.params[TS_PARAMS_F_HZ]
+    normal_cutoff = cutoff / nyquist
+
+    # Create Butterworth filter coefficients
     b, a = butter(order, normal_cutoff, btype='low', analog=False)
+
+    # Apply the filter to the data
     o.data = filtfilt(b, a, series.data)
     o.time = series.time
-    return o
 
+    return o.copy()
 
-# Function to create a Butterworth bandpass filter
 def butter_bandpass(lowcut, highcut, fs, order=4):
+    '''
+    Create Butterworth bandpass filter coefficients.
+
+    Args:
+        lowcut (float): Lower cutoff frequency.
+        highcut (float): Upper cutoff frequency.
+        fs (float): Sampling frequency.
+        order (int, optional): Order of the Butterworth filter. Defaults to 4.
+
+    Returns:
+        tuple: Filter coefficients (b, a).
+    '''
     nyquist = 0.5 * fs
     low = lowcut / nyquist
     high = highcut / nyquist
+
+    # Create Butterworth bandpass filter coefficients
     b, a = butter(order, [low, high], btype='band')
+
     return b, a
 
-# Function to apply a Butterworth filter to a signal
 def bpf_butter(series, lowcut, highcut, order=4):
+    '''
+    Apply a band-pass Butterworth filter to the input time series.
+
+    Args:
+        series (Timeseries): Input time series.
+        lowcut (float): Lower cutoff frequency for the band-pass filter.
+        highcut (float): Upper cutoff frequency for the band-pass filter.
+        order (int, optional): Order of the Butterworth filter. Defaults to 4.
+
+    Returns:
+        Timeseries: Band-pass filtered time series.
+    '''
     o = Timeseries(series.name + " BPF")
     o.params.update(series.params)
-    b, a = butter_bandpass(lowcut, highcut, o.params[TS_PARAMS_F_HZ], order=order)
+
+    # Create Butterworth bandpass filter coefficients
+    b, a = butter_bandpass(lowcut, highcut, series.params[TS_PARAMS_F_HZ], order=order)
+
+    # Apply the filter to the data
     o.data = filtfilt(b, a, series.data)
     o.time = series.time
-    return o
 
-
+    return o.copy()
 
 def norm(series, bits):
+    '''
+    Normalize the input time series to fit within the specified number of bits.
+
+    Args:
+        series (Timeseries): Input time series.
+        bits (int): Number of bits for normalization.
+
+    Returns:
+        Timeseries: Normalized time series.
+    '''
     o = Timeseries(series.name + " Norm")
     o.time = series.time
     o.params.update(series.params)
-    sorted = np.abs(series.data)
-    sorted.sort()
-    maxs = sorted[-10:]
+
+    # Sort the absolute values to find the top 10 largest values
+    sorted_data = np.sort(np.abs(series.data))
+    maxs = sorted_data[-10:]
     maxd = np.average(maxs)
-    max_val = int(2**bits/2 -1)
-    for s in series.data:
-        d = max_val*s/maxd
-        if d > max_val:
-            d = max_val
-        elif d < -max_val:
-            d = -max_val
-        o.data.append(d)
-    return o
+    max_val = (2 ** bits) / 2 - 1
 
-def add_offset(series, offset):
-    o = Timeseries( f"{series.name} offset {offset}", data = np.array(series.data) + offset, time = series.time, f_Hz = series.params[TS_PARAMS_F_HZ])
-    return o
+    # Normalize the data and clip to the specified range
+    normalized_data = np.clip(max_val * series.data / maxd, -max_val, max_val)
 
-def offset_to_pos_and_map(series, bits):
-    o = Timeseries(series.name + " map abs", time = series.time, f_Hz = series.params[TS_PARAMS_F_HZ])
-    o.params.update(series.params)
-    o.params[TS_PARAMS_SAMPLE_B] = bits
-    # Push everything above 0
-    minv = min(series.data)
-    if minv < 0:
-        data = []
-        for s in series.data:
-            data.append(s-minv)
+    o.data = normalized_data
 
-    maxd = max(data)
-    max_val = int(2**bits/2 -1)
-    for s in data:
-        d = max_val*s/maxd
-        if d > max_val:
-            d = max_val
-        elif d < -max_val:
-            d = -max_val
-        o.data.append(d)
-    return o
-
-def quant(series, bits):
-    o = Timeseries(series.name + f" Q({bits})")
-    o.time = series.time
-    o.params.update(series.params)
-    o.params[ TS_PARAMS_SAMPLE_B ] = bits
-    sorted = np.abs(series.data)
-    sorted.sort()
-    maxs = sorted[-10:]
-    maxd = np.average(maxs)
-    max_val = int(2**bits/2 -1)
-    ratio = 1 #maxd/max_val  # Just to scale it next to the other signal
-    for s in series.data:
-        d = int(max_val*s/maxd)*ratio
-        if d > max_val:
-            d = max_val
-        elif d < -max_val:
-            d = -max_val
-
-        o.data.append(d)
-    return o
-
-def get_density(series, win):
-    o = Timeseries("LCdens")
-    abst = 0
-    lstt = 0
-    buf = []
-    for t in series.time:
-        abst += t
-        if abst - lstt > win:
-            o.time.append(abst)
-            o.data.append(len(buf))
-            lstt = abst
-            buf = []
-        else:
-            buf.append(t)
-    return o
-
-
-def spike_det_dt(series, threshold):
-    o = Timeseries("sDet")
-    for s,t in zip(series.data, series.time):
-        if s > threshold or s < -threshold:
-            o.time.append(t)
-    return o
-
-
-def spike_det_lc(series, dt, count):
-    o = Timeseries("sDETlc")
-    i = count
-
-    # print(">>", series.data[:10])
-
-    data = [d for d in series.data if d != 0]
-    time = [t for t,d in zip(series.time, series.data) if d != 0]
-    for i in range(count, len(data)):
-        if all(d == data[i] for d in data[i-count+1:i+1]): # A burst
-            if time[i] - time[i-count] < dt: # fast
-                o.time.append(time[i])
-    return o
-
-
-
-
-
-def oversample(series, order):
-    o = Timeseries(f"Sx{order}" )
-    o.params.update( series.params )
-    o.params[TS_PARAMS_F_HZ] = series.params[TS_PARAMS_F_HZ]*order
-    f = interpolate.interp1d(series.time, series.data)
-    num_points = int((series.time[-1] - series.time[0]) * o.params[TS_PARAMS_F_HZ]) + 1
-    o.time = np.linspace( series.time[0], series.time[-1], num_points )
-    # o.params[TS_PARAMS_LENGTH_S] = max(o.time)?
-    o.data = f(o.time)
     return o.copy()
 
 
 
-def compute_sdr(original_signal, new_signal, interpolate=False):
+def add_offset(series, offset):
+    '''
+    Add a constant offset to the input time series.
 
+    Args:
+        series (Timeseries): Input time series.
+        offset (float): Offset to be added to the data.
+
+    Returns:
+        Timeseries: Time series with added offset.
+    '''
+    # Add offset to the data
+    offset_data = series.data + offset
+
+    o = Timeseries(f"{series.name} offset {offset}", data=offset_data, time=series.time, f_Hz=series.params[TS_PARAMS_F_HZ])
+
+    return o.copy()
+
+
+def offset_to_pos_and_map(series, bits):
+    '''
+    Convert offset to positive values and map them to the specified number of bits.
+
+    Args:
+        series (Timeseries): Input time series.
+        bits (int): Number of bits for mapping.
+
+    Returns:
+        Timeseries: Timeseries with positive offset values mapped to the specified number of bits.
+    '''
+    o = Timeseries(series.name + " map abs", time=series.time, f_Hz=series.params[TS_PARAMS_F_HZ])
+    o.params.update(series.params)
+    o.params[TS_PARAMS_SAMPLE_B] = bits
+
+    # Ensure data is a numpy array of type float32
+    data = np.array(series.data, dtype=np.float32)
+
+    # Push everything above 0
+    minv = np.min(data)
+    if minv < 0:
+        data -= minv  # Vectorized operation to shift all data points
+
+    maxd = np.max(data)
+    max_val = (2 ** bits) / 2 - 1
+
+    # Map values to the specified number of bits
+    o.data = np.clip(max_val * data / maxd, -max_val, max_val)
+
+    return o.copy()
+
+
+def spike_det_lc(series, dt, count):
+    '''
+    Spike detection using a Level Crossing algorithm.
+
+    Args:
+        series (Timeseries): Input time series.
+        dt (float): Time difference threshold for burst detection.
+        count (int): Number of consecutive data points to consider for burst detection.
+
+    Returns:
+        Timeseries: Detected spikes time series.
+    '''
+    o = Timeseries("sDETlc")  # Initialize output Timeseries
+    data = series.data
+    time = series.time
+
+    # Filter out zero values from the data and corresponding time points
+    non_zero_data = [d for d in data if d != 0]
+    non_zero_time = [t for t, d in zip(time, data) if d != 0]
+    o_time = []
+
+    # Iterate over the data points to detect bursts
+    for i in range(count, len(non_zero_data)):
+        if all(d == non_zero_data[i] for d in non_zero_data[i - count + 1: i + 1]):  # Check for burst
+            if non_zero_time[i] - non_zero_time[i - count] < dt:  # Check burst duration
+                o_time.append(non_zero_time[i])
+
+    o.time = np.array(o_time)
+    return o.copy()
+
+
+def oversample(series, order):
+    '''
+    Oversample the input time series by a given order.
+
+    Args:
+        series (Timeseries): Input time series.
+        order (int): Oversampling order.
+
+    Returns:
+        Timeseries: Oversampled time series.
+    '''
+    # Create a new Timeseries object for oversampled data
+    o = Timeseries(f"Sx{order}")
+
+    # Update parameters for oversampled data
+    o.params.update(series.params)
+    o.params[TS_PARAMS_F_HZ] = series.params[TS_PARAMS_F_HZ] * order
+
+    # Interpolate the input data to oversample
+    f = interpolate.interp1d(series.time, series.data)
+    num_points = int((series.time[-1] - series.time[0]) * o.params[TS_PARAMS_F_HZ]) + 1
+    o.time = np.linspace(series.time[0], series.time[-1], num_points)
+    o.data = f(o.time)
+
+    return o
+
+
+def compute_sdr(original_signal, new_signal, interpolate=False):
+    '''
+    Compute Signal-to-Distortion Ratio (SDR) between the original signal and the new signal.
+
+    Args:
+        original_signal (ndarray): Original signal.
+        new_signal (ndarray): New signal.
+        interpolate (bool, optional): Whether to interpolate the new signal to match the length of the original signal.
+                                      Defaults to False.
+
+    Returns:
+        float: Signal-to-Distortion Ratio (SDR) in dB.
+    '''
     # If interpolation is enabled, interpolate the new signal
     if interpolate:
         # Interpolate the new signal to match the length of the original signal
@@ -337,42 +522,86 @@ def compute_sdr(original_signal, new_signal, interpolate=False):
 
     return sdr
 
+
 def add_noise(series, drop_rate_dBpdec=-3, initial_magnitude=100, line_magnitude=0.1):
-    o = Timeseries("Noisy signal")
+    '''
+    Add noise to the input time series.
+
+    Args:
+        series (Timeseries): Input time series.
+        drop_rate_dBpdec (float, optional): Drop rate in dB per decade. Defaults to -3.
+        initial_magnitude (float, optional): Initial magnitude of the noise. Defaults to 100.
+        line_magnitude (float, optional): Magnitude of sinusoidal noise. Defaults to 0.1.
+
+    Returns:
+        Timeseries: Time series with added noise.
+    '''
+    o = Timeseries("Noisy signal")  # Initialize output Timeseries
     o.time = series.time
     o.params[TS_PARAMS_F_HZ] = series.params[TS_PARAMS_F_HZ]
 
     # Generate random noise with desired characteristics
     num_samples = len(series.data)
-    freqs       = np.fft.fftfreq(num_samples, 1/series.params[TS_PARAMS_F_HZ])
-    magnitude   = initial_magnitude / (1 + (freqs / 1)**2)**(abs(drop_rate_dBpdec) / 20)  # Magnitude with drop rate
-    phase       = np.random.uniform(0, 2*np.pi, num_samples)  # Random phase
-    spectrum    = magnitude * np.exp(1j * phase)
-    noise       = np.fft.ifft(spectrum).real
+    freqs = np.fft.fftfreq(num_samples, 1 / series.params[TS_PARAMS_F_HZ])
+    magnitude = initial_magnitude / (1 + (freqs / 1) ** 2) ** (abs(drop_rate_dBpdec) / 20)  # Magnitude with drop rate
+    phase = np.random.uniform(0, 2 * np.pi, num_samples)  # Random phase
+    spectrum = magnitude * np.exp(1j * phase)
+    noise = np.fft.ifft(spectrum).real
+
     # Add sinusoidal noise at 50 Hz
     sinusoidal_noise = line_magnitude * np.sin(2 * np.pi * 50 * series.time)
+
     # Combine the noises
     total_noise = noise + sinusoidal_noise
+
     # Add noise to the original signal
     o.data = series.data + total_noise
 
-    o.params[TS_PARAMS_NOISE_DROP_RATE_DBPDEC]  = drop_rate_dBpdec
-    o.params[TS_PARAMS_NOISE_DC_COMP]           = initial_magnitude
+    # Set noise parameters
+    o.params[TS_PARAMS_NOISE_DROP_RATE_DBPDEC] = drop_rate_dBpdec
+    o.params[TS_PARAMS_NOISE_DC_COMP] = initial_magnitude
 
-    return o
+    return o.copy()
 
-def normalize( series):
-    factor = 1/( max( abs(max(series.data)), abs(min(series.data)) ))
-    o = Timeseries( "Normalized",
-                    data = np.array(series.data)*factor,
-                    time = series.time
-                    )
-    o.params[TS_PARAMS_AMPL_RANGE] = [0,1]
-    return o, factor
 
-def scale( series, factor ):
-    o = Timeseries( f"Scaled x{factor}",
-        data = np.array(series.data)*factor,
-        time = series.time
-        )
-    return o
+def normalize(series):
+    '''
+    Normalize the input time series.
+
+    Args:
+        series (Timeseries): Input time series.
+
+    Returns:
+        Tuple[Timeseries, float]: Tuple containing the normalized time series and the normalization factor.
+    '''
+    # Calculate normalization factor
+    factor = 1 / (max(abs(np.max(series.data)), abs(np.min(series.data))))
+
+    # Create the normalized time series
+    o = Timeseries("Normalized",
+                   data=series.data * factor,
+                   time=series.time)
+
+    # Set amplitude range parameter
+    o.params[TS_PARAMS_AMPL_RANGE] = [0, 1]
+
+    return o.copy(), factor
+
+
+def scale(series, factor):
+    '''
+    Scale the input time series by a given factor.
+
+    Args:
+        series (Timeseries): Input time series.
+        factor (float): Scaling factor.
+
+    Returns:
+        Timeseries: Scaled time series.
+    '''
+    # Create the scaled time series
+    o = Timeseries(f"Scaled x{factor}",
+                   data=series.data * factor,
+                   time=series.time)
+
+    return o.copy()

@@ -1,7 +1,7 @@
 
 
 
-
+import tracemalloc
 import itertools
 import time
 from timeseries import *
@@ -48,7 +48,7 @@ class Step()    :
                 self.count += 1
                 print(f"\r{count}", end=" ")
                 # print(f"{self.name} \t {count}\t({self.mycounts})")
-        print(f"\n✅\t{self.name}\tOutput {len(self.outputs)} timeseries.\tTook {self.latency:0.3f} s.")
+        print(f"\n✅\t{self.name}\tOutput {len(self.outputs)} timeseries.\tTook {self.latency:0.3f} s ({self.latency/len(self.outputs):0.3f} s/Ts).")
         return count
 
     def copy(self):
@@ -141,76 +141,3 @@ def get_all_steps_recursive(parent_step):
 
     collect_steps(parent_step)
     return all_steps
-
-
-import multiprocessing
-from multiprocessing import Pool
-
-class Step_parallel()    :
-    def __init__(self, name, operation, params_list_dict ):
-        self.name               = name
-        self.operation          = operation
-        self.params_list_dict   = params_list_dict
-        self.params_list        = []
-        self.children_steps     = []
-        self.inputs             = []
-        self.outputs            = []
-        self.outputs_count      = 0
-        self.latency            = 0
-        self.count              = 0
-
-    def populate(self):
-        keys                    = self.params_list_dict.keys()
-        values                  = self.params_list_dict.values()
-        self.params_list        = [dict(zip(keys, combination)) for combination in itertools.product(*values)]
-        self.outputs_count      = len(self.params_list)
-        print(f"Populated {self.name} and would generate {self.outputs_count} outputs")
-
-    def _process_input(self, args):
-        in_signal, params = args
-        start_time = time.time()
-        output = self.operation(in_signal, params)
-        end_time = time.time()
-        latency = end_time - start_time
-
-        if output is not None:
-            output.params[TS_PARAMS_STEP_HISTORY].append(self.name)
-            output.params[TS_PARAMS_LATENCY_HISTORY].append(latency)
-            output.params[TS_PARAMS_INPUT_SERIES] = in_signal
-            output.params[TS_PARAMS_OPERATION] = self.operation
-            return output, latency
-        return None, latency
-
-    def run(self, count=0):
-        processes= multiprocessing.cpu_count()
-
-        start_time = time.time()
-        with Pool(processes) as pool:
-            results = pool.map(self._process_input, [(in_signal, params) for in_signal in self.inputs for params in self.params_list])
-
-            max_latency = 0
-            for output, latency in results:
-                if latency > max_latency:
-                    max_latency = latency
-                if output is not None:
-                    self.outputs.append(output)
-                    count += 1
-                    self.count += 1
-                    print(f"\r{count}", end=" ")
-
-        end_time = time.time()
-        self.latency = end_time - start_time
-
-        print(f"\n✅\t{self.name}\tOutput {len(self.outputs)} timeseries.\tTook {self.latency:0.3f} s.")
-        return count
-
-    def copy(self):
-        return deepcopy(self)
-
-
-    def init(self, inputs, count ):
-        self.inputs = inputs
-        count = self.run( count )
-        return count
-
-
