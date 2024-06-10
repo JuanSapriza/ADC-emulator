@@ -7,17 +7,18 @@
 from timeseries import *
 from processes import *
 
-TS_PARAMS_LC_LVLS = "LC levels"
-TS_PARAMS_LC_LVL_W_FRACT = "LC level width by fraction"
-TS_PARAMS_LC_LVL_W_B = "LC level width by bits"
-TS_PARAMS_LC_STRAT = "LC strategy"
-TS_PARAMS_LC_ACQ_AMP_B = "LC Acquisition word size of Amplitude"
-TS_PARAMS_LC_ACQ_DIR_B = "LC Acquisition word size of Direction"
-TS_PARAMS_LC_ACQ_TIME_B = "LC Acquisition word size of Time"
-TS_PARAMS_LC_ACQ_AMP_STRAT = "LC Acquisition strategy amplitude"
-TS_PARAMS_LC_ACQ_DIR_STRAT = "LC Acquisition strategy direction"
+TS_PARAMS_LC_LVLS           = "LC levels"
+TS_PARAMS_LC_LVL_W_FRACT    = "LC level width by fraction"
+TS_PARAMS_LC_LVL_W_B        = "LC level width by bits"
+TS_PARAMS_LC_STRAT          = "LC strategy"
+TS_PARAMS_LC_FREQ_LIM       = "LC ADC datarate limit"
+TS_PARAMS_LC_ACQ_AMP_B      = "LC Acquisition word size of Amplitude"
+TS_PARAMS_LC_ACQ_DIR_B      = "LC Acquisition word size of Direction"
+TS_PARAMS_LC_ACQ_TIME_B     = "LC Acquisition word size of Time"
+TS_PARAMS_LC_ACQ_AMP_STRAT  = "LC Acquisition strategy amplitude"
+TS_PARAMS_LC_ACQ_DIR_STRAT  = "LC Acquisition strategy direction"
 TS_PARAMS_LC_ACQ_TIME_STRAT = "LC Acquisition strategy time"
-TS_PARAMS_LC_ACQ_F_HZ = "LC Acquisition ~ frequency"
+TS_PARAMS_LC_ACQ_F_HZ       = "LC Acquisition ~ frequency"
 
 def lcadc_simple(series, lvls):
     '''
@@ -85,6 +86,7 @@ def lcadc_fraction(series, lvl_w_fraction):
             last_sample = i
     o.data = np.array(o_data, dtype=np.float32)
     o.time = np.array(o_time, dtype=np.float32)
+    o.params[TS_PARAMS_LC_ACQ_F_HZ] = len(o.data) / series.params[TS_PARAMS_LENGTH_S]
     return o.copy()
 
 def lc_subsampler_fraction(series, lvl_w_fraction):
