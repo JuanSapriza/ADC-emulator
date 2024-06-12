@@ -600,8 +600,8 @@ def scale(series, factor):
         Timeseries: Scaled time series.
     '''
     # Create the scaled time series
-    o = Timeseries(f"Scaled x{factor}",
-                   data=series.data * factor,
-                   time=series.time)
-
+    o = Timeseries(f" scaled x{factor}")
+    o.data = series.data*factor
+    o.time = series.time
+    o.params.update(series.params)
     return o.copy()
