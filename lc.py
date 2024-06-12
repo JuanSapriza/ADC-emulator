@@ -245,7 +245,7 @@ def lc_task_detect_spike(series, length=10, dt_s=0.025):
 
     return switch_indexes
 
-def lc_task_detect_spike_online(series, start_time_s=0, length=10, dt_s=0.0025):
+def lc_task_detect_spike_online(series, start_time_s=0, length=10, dt_s=0.0025, Block=True):
     '''
     Online spike detection in a level crossing series.
 
@@ -263,7 +263,7 @@ def lc_task_detect_spike_online(series, start_time_s=0, length=10, dt_s=0.0025):
     data = series.data[1:]
     time = (np.array(series.time[1:]) + 1) / series.params[TS_PARAMS_F_HZ]  # +1 because skipped=0 is still one more sample
     count = 0
-    blocked = 0
+    blocked = False
 
     o_time = []
 
@@ -273,9 +273,9 @@ def lc_task_detect_spike_online(series, start_time_s=0, length=10, dt_s=0.0025):
             if count >= length:
                 if not blocked:
                     o_time.append(start_time_s + sum(np.array(time[:i])))
-                    count, blocked = 0, 1
+                    count, blocked = 0, Block
                 else:
-                    count, blocked = 0, 0
+                    count, blocked = 0, False
             else:
                 count = 0
         if time[i] <= dt_s:
@@ -360,7 +360,7 @@ def lcadc_reconstruct_arrows(series, start_time_s):
         start_time_s (float): Start time for reconstruction.
 
     Returns:
-        Timeseries: Reconstructed arrows time series.
+        Timeseries: Reconstructed arrows time series. Transforms time to absolute values.
     '''
     o = Timeseries(series.name + " LCrecTime")
     o.params.update(series.params)
