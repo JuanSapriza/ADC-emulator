@@ -266,13 +266,14 @@ def lc_task_detect_spike_online(series, start_time_s=0, length=10, dt_s=0.0025, 
     blocked = False
 
     o_time = []
-
+    o_data = []
     for i in range(length, len(data)):
         if np.sign(data[i]) != np.sign(data[i-1]) or time[i] > dt_s:
             count += abs(data[i-1])
             if count >= length:
                 if not blocked:
                     o_time.append(start_time_s + sum(np.array(time[:i])))
+                    o_data.append(count)
                     count, blocked = 0, Block
                 else:
                     count, blocked = 0, False
@@ -282,7 +283,7 @@ def lc_task_detect_spike_online(series, start_time_s=0, length=10, dt_s=0.0025, 
             count += abs(data[i-1])
 
     o.time = np.array(o_time, dtype=np.float32)
-    o.data = np.zeros(len(o.time), dtype=np.float32)
+    o.data = np.array(o_data, dtype=np.float32)
     return o.copy()
 
 def lc_aso(series, lvls):
