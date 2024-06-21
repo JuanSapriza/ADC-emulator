@@ -344,36 +344,6 @@ def bpf_butter(series, lowcut, highcut, order=4):
 
     return o.copy()
 
-def norm(series, bits):
-    '''
-    Normalize the input time series to fit within the specified number of bits.
-
-    Args:
-        series (Timeseries): Input time series.
-        bits (int): Number of bits for normalization.
-
-    Returns:
-        Timeseries: Normalized time series.
-    '''
-    o = Timeseries(series.name + " Norm")
-    o.time = series.time
-    o.params.update(series.params)
-
-    # Sort the absolute values to find the top 10 largest values
-    sorted_data = np.sort(np.abs(series.data))
-    maxs = sorted_data[-10:]
-    maxd = np.average(maxs)
-    max_val = (2 ** bits) / 2 - 1
-
-    # Normalize the data and clip to the specified range
-    normalized_data = np.clip(max_val * series.data / maxd, -max_val, max_val)
-
-    o.data = normalized_data
-
-    return o.copy()
-
-
-
 def add_offset(series, offset):
     '''
     Add a constant offset to the input time series.
@@ -563,6 +533,33 @@ def add_noise(series, drop_rate_dBpdec=-3, initial_magnitude=100, line_magnitude
 
     return o.copy()
 
+def norm_bits(series, bits):
+    '''
+    Normalize the input time series to fit within the specified number of bits.
+
+    Args:
+        series (Timeseries): Input time series.
+        bits (int): Number of bits for normalization.
+
+    Returns:
+        Timeseries: Normalized time series.
+    '''
+    o = Timeseries(series.name + " Norm")
+    o.time = series.time
+    o.params.update(series.params)
+
+    # Sort the absolute values to find the top 10 largest values
+    sorted_data = np.sort(np.abs(series.data))
+    maxs = sorted_data[-10:]
+    maxd = np.average(maxs)
+    max_val = (2 ** bits) / 2 - 1
+
+    # Normalize the data and clip to the specified range
+    normalized_data = np.clip(max_val * series.data / maxd, -max_val, max_val)
+
+    o.data = normalized_data
+
+    return o.copy()
 
 def normalize(series):
     '''
@@ -586,6 +583,27 @@ def normalize(series):
     o.params[TS_PARAMS_AMPL_RANGE] = [0, 1]
 
     return o.copy(), factor
+
+def normalize_01(series):
+    """
+    Normalize the data of a TimeSeries instance to the range [0, 1].
+
+    Parameters:
+    series (TimeSeries): The TimeSeries instance with 'time' and 'data' attributes.
+
+    Returns:
+    TimeSeries: A new TimeSeries instance with 'time' unchanged and 'data' normalized.
+    """
+
+    o = Timeseries("Normalzied")
+    o.params.update(series.params)
+    min_val = np.min(series.data)
+    max_val = np.max(series.data)
+
+    o.data = (series.data - min_val) / (max_val - min_val)
+    o.time = series.time
+    o.params[TS_PARAMS_AMPL_RANGE] = [0,1]
+    return o.copy()
 
 
 def scale(series, factor):

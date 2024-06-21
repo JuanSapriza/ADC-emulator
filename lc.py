@@ -68,7 +68,7 @@ def lcadc_fraction(series, lvl_w_fraction):
     Returns:
         Timeseries: Level crossing time series.
     '''
-    lvl_w = series.params[TS_PARAMS_AMPL_RANGE][1] / lvl_w_fraction
+    lvl_w = (np.abs(series.params[TS_PARAMS_AMPL_RANGE][1])+np.abs(series.params[TS_PARAMS_AMPL_RANGE][0])) / lvl_w_fraction
     lvls = list(np.arange(series.params[TS_PARAMS_AMPL_RANGE][0], series.params[TS_PARAMS_AMPL_RANGE][1], lvl_w))
     o = Timeseries("LC fraction")
     o.params.update(series.params)
