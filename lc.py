@@ -245,7 +245,7 @@ def lc_task_detect_spike(series, length=10, dt_s=0.025):
 
     return switch_indexes
 
-def lc_task_detect_spike_online(series, start_time_s=0, length=10, dt_s=0.0025, Block=True):
+def lc_task_detect_spike_online(series, start_time_s=0, length=10, dt_n=0, Block=True):
     '''
     Online spike detection in a level crossing series.
 
@@ -261,6 +261,7 @@ def lc_task_detect_spike_online(series, start_time_s=0, length=10, dt_s=0.0025, 
     o = Timeseries(series.name + " LC R-peak detection")
     o.params.update(series.params)
     data = series.data[1:]
+    series_time = series.time[1:]
     time = (np.array(series.time[1:]) + 1) / series.params[TS_PARAMS_F_HZ]  # +1 because skipped=0 is still one more sample
     count = 0
     blocked = False
@@ -268,7 +269,7 @@ def lc_task_detect_spike_online(series, start_time_s=0, length=10, dt_s=0.0025, 
     o_time = []
     o_data = []
     for i in range(length, len(data)):
-        if np.sign(data[i]) != np.sign(data[i-1]) or time[i] > dt_s:
+        if np.sign(data[i]) != np.sign(data[i-1]) or series_time[i] > dt_n:
             count += abs(data[i-1])
             if count >= length:
                 if not blocked:
@@ -279,7 +280,7 @@ def lc_task_detect_spike_online(series, start_time_s=0, length=10, dt_s=0.0025, 
                     count, blocked = 0, False
             else:
                 count = 0
-        if time[i] <= dt_s:
+        elif series_time[i] <= dt_n:
             count += abs(data[i-1])
 
     o.time = np.array(o_time, dtype=np.float32)

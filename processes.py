@@ -426,9 +426,9 @@ def spike_det_lc(series, dt, count):
     return o.copy()
 
 
-def oversample(series, order):
+def oversample(series, order, interpolation=interpolate.interp1d):
     '''
-    Oversample the input time series by a given order.
+    Oversample the input time series by a given order using cubic spline interpolation.
 
     Args:
         series (Timeseries): Input time series.
@@ -444,11 +444,11 @@ def oversample(series, order):
     o.params.update(series.params)
     o.params[TS_PARAMS_F_HZ] = series.params[TS_PARAMS_F_HZ] * order
 
-    # Interpolate the input data to oversample
-    f = interpolate.interp1d(series.time, series.data)
+    # Cubic spline interpolation of the input data to oversample
+    spline = interpolation(series.time, series.data)
     num_points = int((series.time[-1] - series.time[0]) * o.params[TS_PARAMS_F_HZ]) + 1
     o.time = np.linspace(series.time[0], series.time[-1], num_points)
-    o.data = f(o.time)
+    o.data = spline(o.time)
 
     return o
 
