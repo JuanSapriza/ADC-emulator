@@ -11,6 +11,8 @@ import pickle
 TS_PARAMS_F_HZ              = "Frequency (Hz)"
 TS_PARAMS_SAMPLE_B          = "Size per sample (bits)"
 TS_PARAMS_LENGTH_S          = "Length (s)"
+TS_PARAMS_START_S           = "Start time (s)"
+TS_PARAMS_END_S             = "End time (s)"
 TS_PARAMS_PHASE_DEG         = "Sampling phase (°)"
 TS_PARAMS_OFFSET_B          = "Input signal offset (bits)"
 TS_PARAMS_POWER_W           = "Sampling power (W)"

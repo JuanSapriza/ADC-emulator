@@ -19,6 +19,7 @@ TS_PARAMS_LC_ACQ_AMP_STRAT  = "LC Acquisition strategy amplitude"
 TS_PARAMS_LC_ACQ_DIR_STRAT  = "LC Acquisition strategy direction"
 TS_PARAMS_LC_ACQ_TIME_STRAT = "LC Acquisition strategy time"
 TS_PARAMS_LC_ACQ_F_HZ       = "LC Acquisition ~ frequency"
+TS_PARAMS_LC_REC_TIME       = "LC Reconstruction (time only)"
 
 def lcadc_simple(series, lvls):
     '''
@@ -39,6 +40,8 @@ def lcadc_simple(series, lvls):
     o = Timeseries("LC simple")
     o.params.update(series.params)
     o.params[TS_PARAMS_LC_LVLS] = lvls
+    o.params[TS_PARAMS_START_S] = series.time[0]
+    o.params[TS_PARAMS_END_S]   = series.time[-1]
     current_level = np.trunc(series.data[0] / lvl_width)  # Level number in the list.
     o_data = []
     o_time = []
@@ -73,6 +76,8 @@ def lcadc_fraction(series, lvl_w_fraction):
     o = Timeseries("LC fraction")
     o.params.update(series.params)
     o.params[TS_PARAMS_LC_LVLS] = lvls
+    o.params[TS_PARAMS_START_S] = series.time[0]
+    o.params[TS_PARAMS_END_S]   = series.time[-1]
     current_level = np.trunc(series.data[0] / lvl_w)  # Level number in the list.
     last_sample = 0
     o_data = [0]
@@ -112,6 +117,8 @@ def lc_subsampler_fraction(series, lvl_w_fraction):
     o = Timeseries("LC in C from fraction")
     o.params.update(series.params)
     o.params[TS_PARAMS_LC_LVLS] = list(range(0, 2**sample_b, lvl_w))
+    o.params[TS_PARAMS_START_S] = series.time[0]
+    o.params[TS_PARAMS_END_S]   = series.time[-1]
 
     current_lvl = 0  # The last level to be crossed.
     lvl_up, lvl_down = 0, 0  # The value to be crossed to consider that a level was crossed.
@@ -187,6 +194,8 @@ def lc_subsampler(series, lvl_w_b, time_in_skips=True):
     o = Timeseries(series.name + f" LCsubs({lvl_w_b})")
     o.params.update(series.params)
     o.params[TS_PARAMS_LC_LVLS] = list(range(0, 2**series.params[TS_PARAMS_SAMPLE_B], 2**lvl_w_b))
+    o.params[TS_PARAMS_START_S] = series.time[0]
+    o.params[TS_PARAMS_END_S]   = series.time[-1]
 
     lvl_width = 2**lvl_w_b
     current_lvl = ((series.data[0]) // lvl_width) * lvl_width
@@ -245,7 +254,7 @@ def lc_task_detect_spike(series, length=10, dt_s=0.025):
 
     return switch_indexes
 
-def lc_task_detect_spike_online(series, start_time_s=0, length=10, dt_n=0, Block=True):
+def lc_task_detect_spike_online(series, length=10, dt_n=0, Block=True):
     '''
     Online spike detection in a level crossing series.
 
@@ -273,7 +282,7 @@ def lc_task_detect_spike_online(series, start_time_s=0, length=10, dt_n=0, Block
             count += abs(data[i-1])
             if count >= length:
                 if not blocked:
-                    o_time.append(start_time_s + sum(np.array(time[:i])))
+                    o_time.append(series.params[TS_PARAMS_START_S] + sum(np.array(time[:i])))
                     o_data.append(count)
                     count, blocked = 0, Block
                 else:
@@ -321,7 +330,7 @@ def lc_aso(series, lvls):
     o.data = np.array(o_data, dtype=np.float32)
     return o.copy()
 
-def lcadc_reconstruct(series, lvls, start_lvl, start_time_s, end_time_s):
+def lcadc_reconstruct(series, lvls, start_lvl):
     '''
     Reconstructs a LC'd signal.
 
@@ -340,7 +349,7 @@ def lcadc_reconstruct(series, lvls, start_lvl, start_time_s, end_time_s):
     lvl = start_lvl
     lvl = int(min(max(0, lvl + series.data[0]), len(lvls) - 1))
     o_data = [lvls[lvl]]
-    o_time = [start_time_s]
+    o_time = [series.params[TS_PARAMS_START_S]]
 
     for i in range(1, len(series.data)):
         o_time.append(o_time[-1] + ((series.time[i] + 1) / series.params[TS_PARAMS_F_HZ]))
@@ -348,12 +357,12 @@ def lcadc_reconstruct(series, lvls, start_lvl, start_time_s, end_time_s):
         o_data.append(lvls[lvl])
 
     o_data.append(lvls[lvl])
-    o_time.append(end_time_s)
+    o_time.append(series.params[TS_PARAMS_END_S])
     o.data = np.array(o_data, dtype=np.float32)
     o.time = np.array(o_time, dtype=np.float32)
     return o.copy()
 
-def lcadc_reconstruct_arrows(series, start_time_s):
+def lcadc_reconstruct_arrows(series):
     '''
     Generate arrows for a LC'd signal.
 
@@ -366,7 +375,7 @@ def lcadc_reconstruct_arrows(series, start_time_s):
     '''
     o = Timeseries(series.name + " LCrecTime")
     o.params.update(series.params)
-    o_time = [start_time_s]
+    o_time = [ series.params[TS_PARAMS_START_S]]
 
     for i in range(1, len(series.data)):
         o_time.append(o_time[-1] + ((series.time[i] + 1) / series.params[TS_PARAMS_F_HZ]))
