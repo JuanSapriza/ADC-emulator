@@ -8,23 +8,7 @@ import numpy as np
 from copy import deepcopy
 import pickle
 
-TS_PARAMS_F_HZ              = "Frequency (Hz)"
-TS_PARAMS_SAMPLE_B          = "Size per sample (bits)"
-TS_PARAMS_LENGTH_S          = "Length (s)"
-TS_PARAMS_START_S           = "Start time (s)"
-TS_PARAMS_END_S             = "End time (s)"
-TS_PARAMS_PHASE_DEG         = "Sampling phase (°)"
-TS_PARAMS_OFFSET_B          = "Input signal offset (bits)"
-TS_PARAMS_POWER_W           = "Sampling power (W)"
-TS_PARAMS_EPC_J             = "Energy per conversion (J)"
-TS_PARAMS_STEP_HISTORY      = "Step history"
-TS_PARAMS_LATENCY_HISTORY   = "Latency history"
-TS_PARAMS_AIDI              = "AIDI"
-TS_PARAMS_DR_BPS            = "Datarate (bps)"
-
-TS_PARAMS_INPUT_SERIES      = "Input series"
-TS_PARAMS_OPERATION         = "Operation"
-
+from ts_params import *
 
 
 class Timeseries:
@@ -174,6 +158,9 @@ class Timeseries:
         """
         for k, v in self.params.items():
             print(f"{k}\t{v}")
+
+    def accumulate_param(self,  k, v):
+        self.params[k] = self.params.get(k, 0) + v
 
     def min_bits_required(self):
         """

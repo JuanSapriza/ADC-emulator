@@ -10,10 +10,6 @@ import numpy as np
 
 from timeseries import *
 
-TS_PARAMS_AMPL_RANGE = "Amplitude range"
-TS_PARAMS_NOISE_DROP_RATE_DBPDEC = "Noise drop rate (dB/dec)"
-TS_PARAMS_NOISE_DC_COMP = "DC component (???)"
-
 def pas(series, e):
     '''
     Implement a Polygonal Approximator.

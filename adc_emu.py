@@ -10,29 +10,29 @@ from processes import *
 
 class ADC:
     def __init__(self,
-                 name: str = "myVirtualADC",
-                 units: str = "Arbitrary units",
-                 f_Hz: float = 0,
-                 dynRange: list[float] = [0, 0],
-                 bandwidth: list[float] = [0, 0],
-                 noise_dev: float = 0,
-                 phase_deg: float = 0,
-                 SNR_dB: float = 100,
-                 THD_pc: float = 0,
-                 epc_J: float = 0,
-                 tpc_s: float = 0,
-                 res_b: int = 0,
-                 time_bits: int = 0,
-                 buf_smpl: int = 1,
-                 channels: int = 1,
-                 diff: bool = False,
-                 interrupt: int = -1,
-                 ac_coupling_n: int = 0,
-                 signed: bool = False,
-                 map: bool = False,
-                 out_range_b: int = 0,
-                 series: Timeseries = None,
-                 linear_range: list[float] = [0, 0]):
+                 name:          str         = "myVirtualADC",
+                 units:         str         = "Arbitrary units",
+                 f_Hz:          float       = 0,
+                 dynRange:      list[float] = [0, 0],
+                 bandwidth:     list[float] = [0, 0],
+                 noise_dev:     float       = 0,
+                 phase_deg:     float       = 0,
+                 SNR_dB:        float       = 100,
+                 THD_pc:        float       = 0,
+                 epc_J:         float       = 0,
+                 tpc_s:         float       = 0,
+                 res_b:         int         = 0,
+                 time_bits:     int         = 0,
+                 buf_smpl:      int         = 1,
+                 channels:      int         = 1,
+                 diff:          bool        = False,
+                 interrupt:     int         = -1,
+                 ac_coupling_n: int         = 0,
+                 signed:        bool        = False,
+                 map:           bool        = False,
+                 out_range_b:   int         = 0,
+                 series:        Timeseries  = None,
+                 linear_range:  list[float] = [0, 0]):
         """
         Create a virtual ADC with specified characteristics.
 
@@ -125,8 +125,9 @@ class ADC:
                                      data=series.data,
                                      time=series.time)
         self.conversion.params.update(series.params)
-        self.conversion.params[TS_PARAMS_DR_BPS] = self.res_b*self.f_Hz
-        self.conversion.params[TS_PARAMS_EPC_J] = self.epc_J
+        self.conversion.params[TS_PARAMS_SCORE_DR_BPS] = self.res_b*self.f_Hz
+        self.conversion.params[TS_PARAMS_SCORE_ENERGY_PER_OP_J] = self.epc_J
+        # self.conversion.accumulate_param(TS_PARAMS_SCORE_ENERGY_TOTAL_J, self.epc_J*self.f_Hz*len(self.conversion.time))
 
     def measEnergy(self, series: Timeseries):
         '''
