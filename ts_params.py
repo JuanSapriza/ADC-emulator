@@ -82,6 +82,7 @@ TS_PARAMS_LC_ACQ_DIR_STRAT                  = "LC Acquisition strategy direction
 TS_PARAMS_LC_ACQ_TIME_STRAT                 = "LC Acquisition strategy time"
 TS_PARAMS_LC_ACQ_F_HZ                       = "LC Acquisition ~ frequency (Hz)"
 TS_PARAMS_LC_REC_TIME                       = "LC Reconstruction (time only)"
+TS_PARAMS_LC_REC_METHOD                     = "LC reconstruction method"
 
 TS_PARAMS_AMPL_RANGE                        = "Amplitude range"
 TS_PARAMS_NOISE_DROP_RATE_DBPDEC            = "Noise drop rate (dB/dec)"

@@ -11,7 +11,7 @@ import numpy as np
 from timeseries import *
 
 def pas(series, e):
-    '''
+    """
     Implement a Polygonal Approximator.
 
     Args:
@@ -20,7 +20,7 @@ def pas(series, e):
 
     Returns:
         Timeseries: Polygonally approximated time series.
-    '''
+    """
     data = series.data
     time = series.time
     dx = 1  # Time differential
@@ -59,7 +59,7 @@ def pas(series, e):
     return o.copy()
 
 def neo(series, win):
-    '''
+    """
     NEO operator.
 
     Args:
@@ -68,7 +68,7 @@ def neo(series, win):
 
     Returns:
         Timeseries: Time series after NEO operation.
-    '''
+    """
     o = Timeseries(series.name + " NEO")
     o.params[TS_PARAMS_F_HZ] = series.params[TS_PARAMS_F_HZ]
     t_diff = int(o.params[TS_PARAMS_F_HZ] * win)
@@ -88,7 +88,7 @@ def neo(series, win):
     return o.copy()
 
 def aso(series, win):
-    '''
+    """
     Amplitude Slope Operator (ASO).
 
     Args:
@@ -97,7 +97,7 @@ def aso(series, win):
 
     Returns:
         Timeseries: Time series after ASO operation.
-    '''
+    """
     o = Timeseries(series.name + " ASO")
     o.params[TS_PARAMS_F_HZ] = series.params[TS_PARAMS_F_HZ]
     t_diff = int(o.params[TS_PARAMS_F_HZ] * win)
@@ -117,7 +117,7 @@ def aso(series, win):
     return o.copy()
 
 def as2o(series, win):
-    '''
+    """
     Amplitude Slope Squared Operator (AS2O).
 
     Args:
@@ -126,7 +126,7 @@ def as2o(series, win):
 
     Returns:
         Timeseries: Time series after AS2O operation.
-    '''
+    """
     o = Timeseries(series.name + " AS2O")
     o.params[TS_PARAMS_F_HZ] = series.params[TS_PARAMS_F_HZ]
     t_diff = int(o.params[TS_PARAMS_F_HZ] * win) if o.params[TS_PARAMS_F_HZ] != 0 else win
@@ -146,7 +146,7 @@ def as2o(series, win):
     return o.copy()
 
 def needle(series, win):
-    '''
+    """
     Needle function to detect inflection points and compute corresponding values.
 
     Args:
@@ -155,7 +155,7 @@ def needle(series, win):
 
     Returns:
         Timeseries: Processed time series.
-    '''
+    """
     o = Timeseries(series.name + " needle'd")
     o.params[TS_PARAMS_F_HZ] = series.params[TS_PARAMS_F_HZ]
     t_diff = int(o.params[TS_PARAMS_F_HZ] * win) if o.params[TS_PARAMS_F_HZ] != 0 else win
@@ -183,7 +183,7 @@ def needle(series, win):
     return o.copy()
 
 def ac_couple(series, win):
-    '''
+    """
     AC coupling function to remove DC offset.
 
     Args:
@@ -192,7 +192,7 @@ def ac_couple(series, win):
 
     Returns:
         Timeseries: AC coupled time series.
-    '''
+    """
     if win == 0:
         return series.copy()
 
@@ -212,7 +212,7 @@ def ac_couple(series, win):
     return o.copy()
 
 def mean_sub(series, win):
-    '''
+    """
     Mean subtraction function to remove mean over a window.
 
     Args:
@@ -221,7 +221,7 @@ def mean_sub(series, win):
 
     Returns:
         Timeseries: Time series with mean subtracted.
-    '''
+    """
     o = Timeseries(series.name + " Mean subtracted")
     o.params.update(series.params)
     o_data = []
@@ -238,7 +238,7 @@ def mean_sub(series, win):
     return o.copy()
 
 def pseudo_mean(series, bits):
-    '''
+    """
     Calculate pseudo mean for the input time series.
 
     Args:
@@ -247,7 +247,7 @@ def pseudo_mean(series, bits):
 
     Returns:
         Timeseries: Time series with pseudo mean calculated.
-    '''
+    """
     o = Timeseries(series.name + " pMean")
     o.params.update(series.params)
     m = int(series.data[0])
@@ -266,7 +266,7 @@ def pseudo_mean(series, bits):
     return o.copy()
 
 def lpf_butter(series, cutoff, order):
-    '''
+    """
     Apply a low-pass Butterworth filter to the input time series.
 
     Args:
@@ -276,7 +276,7 @@ def lpf_butter(series, cutoff, order):
 
     Returns:
         Timeseries: Low-pass filtered time series.
-    '''
+    """
     o = Timeseries(series.name + " LPF")
     o.params.update(series.params)
 
@@ -294,7 +294,7 @@ def lpf_butter(series, cutoff, order):
     return o.copy()
 
 def butter_bandpass(lowcut, highcut, fs, order=4):
-    '''
+    """
     Create Butterworth bandpass filter coefficients.
 
     Args:
@@ -305,7 +305,7 @@ def butter_bandpass(lowcut, highcut, fs, order=4):
 
     Returns:
         tuple: Filter coefficients (b, a).
-    '''
+    """
     nyquist = 0.5 * fs
     low = lowcut / nyquist
     high = highcut / nyquist
@@ -316,7 +316,7 @@ def butter_bandpass(lowcut, highcut, fs, order=4):
     return b, a
 
 def bpf_butter(series, lowcut, highcut, order=4):
-    '''
+    """
     Apply a band-pass Butterworth filter to the input time series.
 
     Args:
@@ -327,7 +327,7 @@ def bpf_butter(series, lowcut, highcut, order=4):
 
     Returns:
         Timeseries: Band-pass filtered time series.
-    '''
+    """
     o = Timeseries(series.name + " BPF")
     o.params.update(series.params)
 
@@ -341,7 +341,7 @@ def bpf_butter(series, lowcut, highcut, order=4):
     return o.copy()
 
 def add_offset(series, offset):
-    '''
+    """
     Add a constant offset to the input time series.
 
     Args:
@@ -350,7 +350,7 @@ def add_offset(series, offset):
 
     Returns:
         Timeseries: Time series with added offset.
-    '''
+    """
     # Add offset to the data
     offset_data = series.data + offset
 
@@ -360,7 +360,7 @@ def add_offset(series, offset):
 
 
 def offset_to_pos_and_map(series, bits):
-    '''
+    """
     Convert offset to positive values and map them to the specified number of bits.
 
     Args:
@@ -369,7 +369,7 @@ def offset_to_pos_and_map(series, bits):
 
     Returns:
         Timeseries: Timeseries with positive offset values mapped to the specified number of bits.
-    '''
+    """
     o = Timeseries(series.name + " map abs", time=series.time, f_Hz=series.params[TS_PARAMS_F_HZ])
     o.params.update(series.params)
     o.params[TS_PARAMS_SAMPLE_B] = bits
@@ -392,7 +392,7 @@ def offset_to_pos_and_map(series, bits):
 
 
 def spike_det_lc(series, dt, count):
-    '''
+    """
     Spike detection using a Level Crossing algorithm.
 
     Args:
@@ -402,7 +402,7 @@ def spike_det_lc(series, dt, count):
 
     Returns:
         Timeseries: Detected spikes time series.
-    '''
+    """
     o = Timeseries("sDETlc")  # Initialize output Timeseries
     data = series.data
     time = series.time
@@ -423,7 +423,7 @@ def spike_det_lc(series, dt, count):
 
 
 def oversample(series, order, interpolation=interpolate.interp1d):
-    '''
+    """
     Oversample the input time series by a given order using cubic spline interpolation.
 
     Args:
@@ -432,7 +432,7 @@ def oversample(series, order, interpolation=interpolate.interp1d):
 
     Returns:
         Timeseries: Oversampled time series.
-    '''
+    """
     # Create a new Timeseries object for oversampled data
     o = Timeseries(f"Sx{order}")
 
@@ -450,7 +450,7 @@ def oversample(series, order, interpolation=interpolate.interp1d):
 
 
 def compute_sdr(original_signal, new_signal, interpolate=False):
-    '''
+    """
     Compute Signal-to-Distortion Ratio (SDR) between the original signal and the new signal.
 
     Args:
@@ -461,7 +461,7 @@ def compute_sdr(original_signal, new_signal, interpolate=False):
 
     Returns:
         float: Signal-to-Distortion Ratio (SDR) in dB.
-    '''
+    """
     # If interpolation is enabled, interpolate the new signal
     if interpolate:
         # Interpolate the new signal to match the length of the original signal
@@ -490,7 +490,7 @@ def compute_sdr(original_signal, new_signal, interpolate=False):
 
 
 def add_noise(series, drop_rate_dBpdec=-3, initial_magnitude=100, line_magnitude=0.1):
-    '''
+    """
     Add noise to the input time series.
 
     Args:
@@ -501,7 +501,7 @@ def add_noise(series, drop_rate_dBpdec=-3, initial_magnitude=100, line_magnitude
 
     Returns:
         Timeseries: Time series with added noise.
-    '''
+    """
     o = Timeseries("Noisy signal")  # Initialize output Timeseries
     o.time = series.time
     o.params[TS_PARAMS_F_HZ] = series.params[TS_PARAMS_F_HZ]
@@ -530,7 +530,7 @@ def add_noise(series, drop_rate_dBpdec=-3, initial_magnitude=100, line_magnitude
     return o.copy()
 
 def norm_bits(series, bits):
-    '''
+    """
     Normalize the input time series to fit within the specified number of bits.
 
     Args:
@@ -539,7 +539,7 @@ def norm_bits(series, bits):
 
     Returns:
         Timeseries: Normalized time series.
-    '''
+    """
     o = Timeseries(series.name + " Norm")
     o.time = series.time
     o.params.update(series.params)
@@ -558,7 +558,7 @@ def norm_bits(series, bits):
     return o.copy()
 
 def normalize(series):
-    '''
+    """
     Normalize the input time series.
 
     Args:
@@ -566,7 +566,7 @@ def normalize(series):
 
     Returns:
         Tuple[Timeseries, float]: Tuple containing the normalized time series and the normalization factor.
-    '''
+    """
     # Calculate normalization factor
     factor = 1 / (max(abs(np.max(series.data)), abs(np.min(series.data))))
 
@@ -603,7 +603,7 @@ def normalize_01(series):
 
 
 def scale(series, factor):
-    '''
+    """
     Scale the input time series by a given factor.
 
     Args:
@@ -612,7 +612,7 @@ def scale(series, factor):
 
     Returns:
         Timeseries: Scaled time series.
-    '''
+    """
     # Create the scaled time series
     o = Timeseries(f" scaled x{factor}")
     o.data = series.data*factor

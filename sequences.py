@@ -125,6 +125,27 @@ def filter_timeseries(timeseries_list, params_dict):
     filtered_timeseries = [ts for ts in timeseries_list if matches_params(ts, params_dict)]
     return filtered_timeseries
 
+def get_child_from_step(series, step):
+    """
+    Get a previous series from the current serie's history.
+
+    :param series: The grand-child series
+    :param step: The step whose output you are looking for
+    :return: The series from the input one's history whose last step was the one specified. If
+    the desired step is not found, None is returned.
+    """
+    while( True ):
+        if series.params[TS_PARAMS_STEP_HISTORY][-1] == step:
+            break
+        else:
+            series = series.params[TS_PARAMS_INPUT_SERIES]
+        if len(series.params[TS_PARAMS_STEP_HISTORY]) == 1:
+            return None
+
+    return series
+
+
+
 def get_all_steps_recursive(parent_step):
     """
     Recursively collect all steps starting from the parent step.
