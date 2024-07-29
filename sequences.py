@@ -1,6 +1,3 @@
-
-
-
 import tracemalloc
 import itertools
 import time
@@ -9,25 +6,28 @@ from copy import deepcopy
 
 class Step()    :
     def __init__(self, name, operation, params_list_dict ):
-        self.name               = name
-        self.operation          = operation
-        self.params_list_dict   = params_list_dict
-        self.params_list        = []
-        self.children_steps     = []
-        self.inputs             = []
-        self.outputs            = []
-        self.outputs_count      = 0
-        self.latency            = 0
-        self.count              = 0
+        self.name                   = name
+        self.operation              = operation
+        self.params_list_dict       = params_list_dict
+        self.params_list            = []
+        self.children_steps         = []
+        self.children_steps_left    = 0
+        self.inputs                 = []
+        self.outputs                = []
+        self.outputs_count          = 0
+        self.latency                = 0
+        self.count                  = 0
 
     def populate(self):
-        keys                    = self.params_list_dict.keys()
-        values                  = self.params_list_dict.values()
-        self.params_list        = [dict(zip(keys, combination)) for combination in itertools.product(*values)]
-        self.outputs_count      = len(self.params_list)
+        keys                        = self.params_list_dict.keys()
+        values                      = self.params_list_dict.values()
+        self.params_list            = [dict(zip(keys, combination)) for combination in itertools.product(*values)]
+        self.outputs_count          = len(self.params_list)
+        self.children_steps_left    = len(self.children_steps)
         print(f"Populated {self.name} and would generate {self.outputs_count} outputs")
 
-    def run(self, count=0):
+    def run(self, count=0, kamikaze=False):
+        print(f"\rStarted {self.name}")
         for in_signal in self.inputs:
             for params in self.params_list:
                 start_time = time.time()  # Capture start time
@@ -42,14 +42,71 @@ class Step()    :
                     output.params[ TS_PARAMS_LATENCY_HISTORY ].append(latency)
                     output.params[ TS_PARAMS_INPUT_SERIES ]     = in_signal
                     output.params[ TS_PARAMS_OPERATION ]        = self.operation
+
+                    if kamikaze and self.children_steps_left == 0:
+                        output.data = []
+                        output.time = []
+
                     self.outputs.append( output )
 
                 count += 1
                 self.count += 1
                 print(f"\r{self.name}: {count}", end=" ")
-                # print(f"{self.name} \t {count}\t({self.mycounts})")
         print(f"\n✅\t{self.name}\tOutput {len(self.outputs)} timeseries.\tTook {self.latency:0.3f} s",f"({self.latency/len(self.outputs):0.3f} s/Ts)." if len(self.outputs) != 0 else "")
         return count
+
+    def run_single_input_single_output(self, in_signal, count=0, kamikaze=False ):
+        print(f"\rStarted {self.name}")
+        for params in self.params_list:
+            start_time = time.time()  # Capture start time
+            output = self.operation(in_signal, params)
+            end_time = time.time()    # Capture end time
+            latency = end_time - start_time
+
+            self.latency += latency
+            if output != None:
+                output.params[ TS_PARAMS_STEP_HISTORY ].append(self.name)
+                output.params[ TS_PARAMS_LATENCY_HISTORY ].append(latency)
+                output.params[ TS_PARAMS_INPUT_SERIES ]     = in_signal
+                output.params[ TS_PARAMS_OPERATION ]        = self.operation
+
+                if kamikaze and self.children_steps_left == 0:
+                    output.data = []
+                    output.time = []
+
+                self.outputs.append( output )
+                yield output
+            count += 1
+            self.count += 1
+        print(f"\n✅\t{self.name}\tOutput {len(self.outputs)} timeseries.\tTook {self.latency:0.3f} s",f"({self.latency/len(self.outputs):0.3f} s/Ts)." if len(self.outputs) != 0 else "")
+
+    def run_single_input_all_output(self, in_signal, count=0, kamikaze=False ):
+        print(f"\rStarted {self.name}")
+        for params in self.params_list:
+            start_time = time.time()  # Capture start time
+            output = self.operation(in_signal, params)
+            end_time = time.time()    # Capture end time
+            latency = end_time - start_time
+
+            self.latency += latency
+            if output != None:
+                output.params[ TS_PARAMS_STEP_HISTORY ].append(self.name)
+                output.params[ TS_PARAMS_LATENCY_HISTORY ].append(latency)
+                output.params[ TS_PARAMS_INPUT_SERIES ]     = in_signal
+                output.params[ TS_PARAMS_OPERATION ]        = self.operation
+
+                if kamikaze and self.children_steps_left == 0:
+                    output.data = []
+                    output.time = []
+
+                self.outputs.append( output )
+
+            count += 1
+            self.count += 1
+            print(f"\r{self.name}: {count}", end=" ")
+        print(f"\n✅\t{self.name}\tOutput {len(self.outputs)} timeseries.\tTook {self.latency:0.3f} s",f"({self.latency/len(self.outputs):0.3f} s/Ts)." if len(self.outputs) != 0 else "")
+        return count
+
 
     def copy(self):
         return deepcopy(self)
@@ -59,6 +116,27 @@ class Step()    :
         self.inputs = inputs
         count = self.run( count )
         return count
+
+
+def run_steps_backwards(step, initial_signals):
+
+    def run_recursive_backwards(step, signal, count ):
+        if step.children_steps != []:
+            outputs = step.run_single_input_single_output( signal )
+            for signal in outputs:
+                for child in step.children_steps:
+                    count = run_recursive_backwards(child, signal, count)
+                step.outputs[-1].data = []
+                step.outputs[-1].time = []
+        else:
+            count = step.run_single_input_all_output( signal, count=count, kamikaze = True )
+
+        return count
+
+    count = 0
+    for signal in initial_signals:
+        count = run_recursive_backwards( step, signal, count )
+
 
 
 
