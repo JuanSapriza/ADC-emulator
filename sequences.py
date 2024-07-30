@@ -27,7 +27,6 @@ class Step()    :
         print(f"Populated {self.name} and would generate {self.outputs_count} outputs")
 
     def run(self, count=0, kamikaze=False):
-        print(f"\rStarted {self.name}")
         for in_signal in self.inputs:
             for params in self.params_list:
                 start_time = time.time()  # Capture start time
@@ -56,7 +55,6 @@ class Step()    :
         return count
 
     def run_single_input_single_output(self, in_signal, count=0, kamikaze=False ):
-        print(f"\rStarted {self.name}")
         for params in self.params_list:
             start_time = time.time()  # Capture start time
             output = self.operation(in_signal, params)
@@ -78,10 +76,8 @@ class Step()    :
                 yield output
             count += 1
             self.count += 1
-        print(f"\n✅\t{self.name}\tOutput {len(self.outputs)} timeseries.\tTook {self.latency:0.3f} s",f"({self.latency/len(self.outputs):0.3f} s/Ts)." if len(self.outputs) != 0 else "")
 
     def run_single_input_all_output(self, in_signal, count=0, kamikaze=False ):
-        print(f"\rStarted {self.name}")
         for params in self.params_list:
             start_time = time.time()  # Capture start time
             output = self.operation(in_signal, params)
@@ -104,7 +100,6 @@ class Step()    :
             count += 1
             self.count += 1
             print(f"\r{self.name}: {count}", end=" ")
-        print(f"\n✅\t{self.name}\tOutput {len(self.outputs)} timeseries.\tTook {self.latency:0.3f} s",f"({self.latency/len(self.outputs):0.3f} s/Ts)." if len(self.outputs) != 0 else "")
         return count
 
 
