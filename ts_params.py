@@ -3,6 +3,7 @@ TS_PARAMS_SAMPLE_B                          = "Size per sample (bits)"
 TS_PARAMS_LENGTH_S                          = "Length (s)"
 TS_PARAMS_START_S                           = "Start time (s)"
 TS_PARAMS_END_S                             = "End time (s)"
+TS_PARAMS_TIME_FORMAT                       = "Format in which the time is represented"
 TS_PARAMS_PHASE_DEG                         = "Sampling phase (°)"
 TS_PARAMS_OFFSET_B                          = "Input signal offset (bits)"
 TS_PARAMS_POWER_W                           = "Sampling power (W)"
@@ -76,7 +77,7 @@ TS_PARAMS_LC_FREQ_LIM                       = "LC ADC datarate limit"
 TS_PARAMS_LC_ACQ_AMP_B                      = "LC Acquisition word size of Amplitude"
 TS_PARAMS_LC_ACQ_DIR_B                      = "LC Acquisition word size of Direction"
 TS_PARAMS_LC_ACQ_TIME_B                     = "LC Acquisition word size of Time"
-TS_PARAMS_LC_TIMER_F_HZ                     = "LC Timer frequency (Hz)"
+TS_PARAMS_TIMER_F_HZ                     = "LC Timer frequency (Hz)"
 TS_PARAMS_LC_ACQ_AMP_STRAT                  = "LC Acquisition strategy amplitude"
 TS_PARAMS_LC_ACQ_DIR_STRAT                  = "LC Acquisition strategy direction"
 TS_PARAMS_LC_ACQ_TIME_STRAT                 = "LC Acquisition strategy time"
@@ -90,3 +91,15 @@ TS_PARAMS_NOISE_DC_COMP                     = "DC component (???)"
 
 TS_PARAMS_INFODATA                          = "Informative data"
 TS_PARAMS_ANN                               = "Annotations (for informative data)"
+
+
+
+
+TIME_FORMAT_DIFF_TM_N   = 'Number of timer periods after previous sample'
+TIME_FORMAT_DIFF_FS_N   = 'Number of sampling periods after previous sample'
+TIME_FORMAT_DIFF_S      = 'Time (s) after previous sample'
+TIME_FORMAT_ABS_S       = 'Absolute time (s) of this sample'
+
+METHODS_FRADC       = "FR-ADC"
+METHODS_LCADC       = "LC-ADC"
+METHODS_LCSUB       = "LCsubs"

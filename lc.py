@@ -7,44 +7,9 @@
 from timeseries import *
 from processes import *
 
-
 '''```````````````````````````````
  LC ADC
 ```````````````````````````````'''
-def lcadc_simple(series, lvls):
-    '''
-    Analog LC ADC simple implementation.
-
-    Compares against level width and returns:
-    - data: A signed int with the number of levels crossed.
-    - time: The absolute time of the crossing.
-
-    Args:
-        series (Timeseries): Input time series.
-        lvls (list): Levels list for compatibility.
-
-    Returns:
-        Timeseries: Level crossing time series.
-    '''
-    lvl_width = lvls[1] - lvls[0]
-    o = Timeseries("LC simple")
-    o.params.update(series.params)
-    o.params[TS_PARAMS_LC_LVLS] = lvls
-    o.params[TS_PARAMS_START_S] = series.time[0]
-    o.params[TS_PARAMS_END_S]   = series.time[-1]
-    current_level = np.trunc(series.data[0] / lvl_width)  # Level number in the list.
-    o_data = []
-    o_time = []
-    for i in range(1, len(series.data)):
-        diff = np.trunc(((series.data[i] - current_level * lvl_width) / lvl_width)).astype(int)
-        if diff != 0:
-            o_data.append(np.sign(diff))
-            o_time.append(series.time[i])
-            current_level = current_level + np.sign(diff)
-    o.data = np.array(o_data, dtype=np.float32)
-    o.time = np.array(o_time, dtype=np.float32)
-    return o.copy()
-
 def lcadc_fraction(series, params ):
     '''
     Analog LC ADC with level width fractions.
@@ -68,6 +33,7 @@ def lcadc_fraction(series, params ):
     o.params[TS_PARAMS_LC_LVLS]     = lvls
     o.params[TS_PARAMS_START_S]     = series.time[0]
     o.params[TS_PARAMS_END_S]       = series.time[-1]
+    o.params[TS_PARAMS_TIME_FORMAT] = TIME_FORMAT_DIFF_TM_N
 
     MAX_TIME = 2**params[TS_PARAMS_LC_ACQ_TIME_B]
 
@@ -80,105 +46,20 @@ def lcadc_fraction(series, params ):
         diff = np.trunc(((series.data[i] - current_level * lvl_w) / lvl_w)).astype(int)
         dir = np.sign(diff)
         diff = abs(diff)
-        analog_samples = i - last_sample - 1
-        timer_samples = max(1, np.round( analog_samples * params[TS_PARAMS_LC_TIMER_F_HZ] / series.params[TS_PARAMS_F_HZ] ) )
+        analog_samples = i - last_sample # - 1
+        timer_samples = max(1, np.round( analog_samples * params[TS_PARAMS_TIMER_F_HZ] / series.params[TS_PARAMS_F_HZ] ) )
 
         consecutives = 0
         while diff > 0 or timer_samples >= MAX_TIME:
             o_data.append(dir)
             current_level = current_level + dir
-            analog_samples = i - last_sample - 1
-            timer_samples = timer_samples = max(1,np.round( analog_samples * params[TS_PARAMS_LC_TIMER_F_HZ] / series.params[TS_PARAMS_F_HZ] )) + consecutives
+            analog_samples = i - last_sample # - 1
+            timer_samples = timer_samples = max(1,np.round( analog_samples * params[TS_PARAMS_TIMER_F_HZ] / series.params[TS_PARAMS_F_HZ] )) + consecutives
             o_time.append(timer_samples)
             last_sample = i
             diff -= 1
             timer_samples = 0
             consecutives += 1
-    o.data = np.array(o_data, dtype=np.int16)
-    o.time = np.array(o_time, dtype=np.int16)
-    o.params[TS_PARAMS_LC_ACQ_F_HZ] = len(o.data) / series.params[TS_PARAMS_LENGTH_S]
-    return o.copy()
-
-def lc_subsampler_fraction_old( series, params ):
-    '''
-    LC subsampler implementation compatible with C code.
-
-    Takes level width as a fraction of the range of the input samples.
-    Returns:
-    - data: A signed int of up to 16 bits with the number of levels crossed.
-    - time: The number of samples skipped.
-
-    Args:
-        series (Timeseries): Input time series.
-        lvl_w_fraction (float): Level width fraction.
-
-    Returns:
-        Timeseries: Level crossing time series.
-    '''
-    fraction_b = np.log2(params[TS_PARAMS_LC_LVL_W_FRACT])
-    sample_b = int(series.params[TS_PARAMS_SAMPLE_B])
-    lvl_w_b = sample_b - fraction_b
-    lvl_w = int(2**lvl_w_b)
-    o = Timeseries("LC in C from fraction")
-    o.params.update(series.params)
-    o.params[TS_PARAMS_LC_LVLS]         = list(range(0, 2**sample_b, lvl_w))
-    o.params[TS_PARAMS_START_S]         = series.time[0]
-    o.params[TS_PARAMS_END_S]           = series.time[-1]
-
-    current_lvl = 0  # The last level to be crossed.
-    lvl_up, lvl_down = 0, 0  # The value to be crossed to consider that a level was crossed.
-    x_up, x_down = False, False  # Whether the sample crossed the upper or lower level
-    dir = 0  # The direction of the crossing (1=up, 0=down). THIS SIGNAL SHOULD BE EXPOSED.
-    xing = False  # Whether the sample crossed any level. THIS SIGNAL SHOULD BE EXPOSED.
-    xings = 0  # The count of crossings between two consecutive samples.
-    skipped = 0  # The count of samples that did not cross any level. Reset on every crossing.
-
-    MAX_VAL = 2**sample_b
-    MIN_VAL = 0
-    MAX_SKIP = 2**params[TS_PARAMS_LC_ACQ_TIME_B] -1
-    MAX_XING = 2**params[TS_PARAMS_LC_ACQ_AMP_B] -1
-
-    o_data = []
-    o_time = []
-
-    for i in range(len(series.data)):
-        dir = 0  # Reset the direction signal
-        while True:
-            xings = 0
-            while True:
-                lvl_up = current_lvl if current_lvl >= MAX_VAL - lvl_w else current_lvl + lvl_w
-                lvl_down = current_lvl if current_lvl <= MIN_VAL + lvl_w else current_lvl - lvl_w
-                x_up = (current_lvl != lvl_up) and (series.data[i] >= lvl_up)
-                x_down = (current_lvl != lvl_down) and (series.data[i] <= lvl_down)
-
-                dir |= x_up
-                xing = x_up or x_down
-                xings += xing
-
-                if xing and dir:
-                    current_lvl = lvl_up
-                elif xing and not dir:
-                    current_lvl = lvl_down
-
-                if not (xing and xings != MAX_XING):
-                    break
-
-            if xings or skipped == MAX_SKIP:
-                while( xings or skipped == MAX_SKIP ):
-                    data    = min( xings, MAX_XING )
-                    xings   = max( 0, xings - MAX_XING)
-                    o_data.append(data if dir else -data)
-                    o_time.append(skipped)
-                    skipped = 0
-                skipped = 1
-
-            else:
-                skipped += 1
-
-            if xings == MAX_XING:
-                continue
-            break
-
     o.data = np.array(o_data, dtype=np.int16)
     o.time = np.array(o_time, dtype=np.int16)
     o.params[TS_PARAMS_LC_ACQ_F_HZ] = len(o.data) / series.params[TS_PARAMS_LENGTH_S]
@@ -206,6 +87,7 @@ def lc_subsampler_fraction( series, params ):
     '''
     fraction_b = np.log2(params[TS_PARAMS_LC_LVL_W_FRACT])
     sample_b = int(series.params[TS_PARAMS_SAMPLE_B])
+    if sample_b <= fraction_b: return None
     lvl_w_b = sample_b - fraction_b
     lvl_w = int(2**lvl_w_b)
     o = Timeseries("LC in C from fraction")
@@ -213,6 +95,7 @@ def lc_subsampler_fraction( series, params ):
     o.params[TS_PARAMS_LC_LVLS]         = list(range(0, 2**sample_b, lvl_w))
     o.params[TS_PARAMS_START_S]         = series.time[0]
     o.params[TS_PARAMS_END_S]           = series.time[-1]
+    o.params[TS_PARAMS_TIME_FORMAT]     = TIME_FORMAT_DIFF_FS_N
 
     current_lvl = 0  # The last level to be crossed.
     dir = 0  # The direction of the crossing (1=up, 0=down). THIS SIGNAL SHOULD BE EXPOSED.
@@ -270,6 +153,7 @@ def lc_subsampler_fraction_half_lsb( series, params ):
     o.params[TS_PARAMS_LC_LVLS]         = list(range(0, 2**sample_b, lvl_w))
     o.params[TS_PARAMS_START_S]         = series.time[0]
     o.params[TS_PARAMS_END_S]           = series.time[-1]
+    o.params[TS_PARAMS_TIME_FORMAT]     = TIME_FORMAT_DIFF_FS_N
 
     current_lvl = 0  # The last level to be crossed.
     dir = 0  # The direction of the crossing (1=up, 0=down). THIS SIGNAL SHOULD BE EXPOSED.
@@ -297,51 +181,6 @@ def lc_subsampler_fraction_half_lsb( series, params ):
 
         skipped += 1
 
-
-    o.data = np.array(o_data, dtype=np.int16)
-    o.time = np.array(o_time, dtype=np.int16)
-    o.params[TS_PARAMS_LC_ACQ_F_HZ] = len(o.data) / series.params[TS_PARAMS_LENGTH_S]
-    return o.copy()
-
-def lc_subsampler(series, lvl_w_b, time_in_skips=True):
-    '''
-    Simple LC subsampler.
-
-    Takes level width in bits.
-    Returns:
-    - data: A signed int with the number of levels crossed.
-    - time: The number of samples skipped.
-
-    Args:
-        series (Timeseries): Input time series.
-        lvl_w_b (int): Level width in bits.
-        time_in_skips (bool): Whether to return time in skips or absolute time.
-
-    Returns:
-        Timeseries: Level crossing time series.
-    '''
-    o = Timeseries(series.name + f" LCsubs({lvl_w_b})")
-    o.params.update(series.params)
-    o.params[TS_PARAMS_LC_LVLS] = list(range(0, 2**series.params[TS_PARAMS_SAMPLE_B], 2**lvl_w_b))
-    o.params[TS_PARAMS_START_S] = series.time[0]
-    o.params[TS_PARAMS_END_S]   = series.time[-1]
-
-    lvl_width = 2**lvl_w_b
-    current_lvl = ((series.data[0]) // lvl_width) * lvl_width
-    last_crossing = 0
-    o_data = [current_lvl]
-    o_time = [0]
-
-    for i in range(1, len(series.data)):
-        diff = (series.data[i] - current_lvl) // lvl_width
-        if diff != 0:
-            o_data.append(diff)
-            if time_in_skips:
-                o_time.append(i - last_crossing - 1)
-                last_crossing = i
-            else:
-                o_time.append(series.time[i] - sum(o_time[:len(o_time)]))
-            current_lvl = max(0, current_lvl + diff * lvl_width)
 
     o.data = np.array(o_data, dtype=np.int16)
     o.time = np.array(o_time, dtype=np.int16)
@@ -403,19 +242,27 @@ def lc_task_detect_spike_online(series, length=10, dt_n=0, Block=True):
     o = Timeseries(series.name + " LC R-peak detection")
     o.params.update(series.params)
     data = series.data[1:]
+
     series_time = series.time[1:]
-    time = (np.array(series.time[1:]) + 1) / series.params[TS_PARAMS_F_HZ]  # +1 because skipped=0 is still one more sample
+    try:
+        f_Hz = series.params[TS_PARAMS_TIMER_F_HZ]
+    except:
+        f_Hz = series.params[TS_PARAMS_F_HZ]
+    time = (np.array(series.time)) / f_Hz
+
     count = 0
     blocked = False
+
+    print(length, dt_n)
 
     o_time = []
     o_data = []
     for i in range(length, len(data)):
-        if np.sign(data[i]) != np.sign(data[i-1]) or series_time[i] > dt_n:
+        if np.sign(data[i]) != np.sign(data[i-1]) or series_time[i] > dt_n or data[i] == 0:
             count += abs(data[i-1])
             if count >= length:
                 if not blocked:
-                    o_time.append(series.params[TS_PARAMS_START_S] + sum(np.array(time[:i])))
+                    o_time.append(series.params[TS_PARAMS_START_S] + sum(np.array(time[:i+1])))
                     o_data.append(count)
                     count, blocked = 0, Block
                 else:
@@ -424,6 +271,28 @@ def lc_task_detect_spike_online(series, length=10, dt_n=0, Block=True):
                 count = 0
         elif series_time[i] <= dt_n:
             count += abs(data[i-1])
+
+
+
+    PLOT = 1
+    if PLOT:
+        import matplotlib.pyplot as plt
+        f = plt.figure(figsize=(10,3))
+        arr = lc_reconstruct_time(series)
+        from sequences import get_child_from_step
+        try:
+            og = get_child_from_step(series, "LC ADC").params[TS_PARAMS_INPUT_SERIES]
+            print("ADC")
+        except:
+            og = get_child_from_step(series, "LC subsampling").params[TS_PARAMS_INPUT_SERIES]
+            print("Subsampled")
+        [plt.axvline(l, color='gray', linestyle='-', alpha=0.2 ) for l in o_time ];
+        scale = max(og.data)/10
+        plt.plot(og.time, og.data, c='b', alpha=0.3)
+        [ plt.axhline(l, color='gray', linestyle='-', alpha=0.2 ) for l in series.params[TS_PARAMS_LC_LVLS] ];
+        [plt.arrow(t,0, dx=0,dy=d*scale, color='r') for t, d in zip(arr.time, arr.data) ];
+        plt.xlim(10,10.8)
+        plt.show()
 
     o.time = np.array(o_time, dtype=np.float32)
     o.data = np.array(o_data, dtype=np.float32)
@@ -482,15 +351,17 @@ def lc_reconstruct(series):
     '''
     o = Timeseries(series.name + " LCrecTime")
     o.params.update(series.params)
+    o.params[TS_PARAMS_TIME_FORMAT] = TIME_FORMAT_ABS_S
     o_time = [ series.params[TS_PARAMS_START_S]]
     lvl_w = series.params[TS_PARAMS_LC_LVLS][1]
     o_data = [series.data[0]*lvl_w]
+
     try:
-        f_Hz = series.params[TS_PARAMS_LC_TIMER_F_HZ]
+        f_Hz = series.params[TS_PARAMS_TIMER_F_HZ]
     except:
         f_Hz = series.params[TS_PARAMS_F_HZ]
 
-    for i in range(1, len(series.data)):
+    for i in range(0, len(series.data)):
         if series.time[i] == 0:
             o_data[-1] += series.data[i]
         else:
@@ -501,7 +372,7 @@ def lc_reconstruct(series):
     o.data = np.array(o_data, dtype=np.float32)
     return o.copy()
 
-def lc_reconstruct_arrows(series):
+def lc_reconstruct_time(series):
     '''
     Generate arrows for a LC'd signal.
 
@@ -513,13 +384,13 @@ def lc_reconstruct_arrows(series):
     '''
     o = Timeseries(series.name + " LCrecTime")
     o.params.update(series.params)
+    o.params[TS_PARAMS_TIME_FORMAT] = TIME_FORMAT_ABS_S
     o_time = [ series.params[TS_PARAMS_START_S]]
     o_data = [0]
 
-    try:
-        f_Hz = series.params[TS_PARAMS_LC_TIMER_F_HZ]
-    except:
-        f_Hz = series.params[TS_PARAMS_F_HZ]
+    try: o.params[TS_PARAMS_F_HZ] = series.params[TS_PARAMS_TIMER_F_HZ]
+    except: pass
+    f_Hz = o.params[TS_PARAMS_F_HZ]
 
     for i in range(0, len(series.data)):
         if series.time[i] == 0:
@@ -546,6 +417,7 @@ def lc_rec_zoh_fmin(series):
     '''
     o = Timeseries(series.name + " rec. ZOH fmin")
     o.params.update(series.params)
+    o.params[TS_PARAMS_TIME_FORMAT] = TIME_FORMAT_ABS_S
 
     t_min_s = (min(series.time)+1)/series.params[TS_PARAMS_F_HZ]
     start_s = series.params[TS_PARAMS_START_S]
@@ -587,6 +459,7 @@ def lc_rec_linear_interp(series):
     '''
     o = Timeseries(series.name + " rec. Linear Interpolation")
     o.params.update(series.params)
+    o.params[TS_PARAMS_TIME_FORMAT] = TIME_FORMAT_ABS_S
 
     t_min_s = (min(series.time)+1)/series.params[TS_PARAMS_F_HZ]
     start_s = series.params[TS_PARAMS_START_S]
@@ -649,6 +522,7 @@ def lc_rec_poly_interp(series, order):
     '''
     o = Timeseries(series.name + f" rec. Poly Interp order {order}")
     o.params.update(series.params)
+    o.params[TS_PARAMS_TIME_FORMAT] = TIME_FORMAT_ABS_S
 
     t_min_s = (min(series.time)+1)/series.params[TS_PARAMS_F_HZ]
     start_s = series.params[TS_PARAMS_START_S]

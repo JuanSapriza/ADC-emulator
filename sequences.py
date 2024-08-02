@@ -124,7 +124,7 @@ def run_steps_backwards(step, initial_signals):
                 step.outputs[-1].data = []
                 step.outputs[-1].time = []
         else:
-            count = step.run_single_input_all_output( signal, count=count, kamikaze = True )
+            count = step.run_single_input_all_output( signal, count=count, kamikaze = False )
 
         return count
 
@@ -136,7 +136,6 @@ def run_steps_backwards(step, initial_signals):
 
 
 def run_steps( step, initial_signals ):
-
     def run_steps_recursive( parent, count=0 ):
         for child in parent.children_steps:
             child.inputs = parent.outputs

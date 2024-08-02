@@ -352,9 +352,11 @@ def add_offset(series, offset):
         Timeseries: Time series with added offset.
     """
     # Add offset to the data
-    offset_data = series.data + offset
+    offset_data = np.array(series.data) + offset
 
-    o = Timeseries(f"{series.name} offset {offset}", data=offset_data, time=series.time, f_Hz=series.params[TS_PARAMS_F_HZ])
+    o       = Timeseries(f"{series.name} offset {offset}", time=series.time )
+    o.params.update(series.params)
+    o.data  = offset_data
 
     return o.copy()
 
@@ -446,7 +448,7 @@ def oversample(series, order, interpolation=interpolate.interp1d):
     o.time = np.linspace(series.time[0], series.time[-1], num_points)
     o.data = spline(o.time)
 
-    return o
+    return o.copy()
 
 
 def compute_sdr(original_signal, new_signal, interpolate=False):
@@ -504,7 +506,7 @@ def add_noise(series, drop_rate_dBpdec=-3, initial_magnitude=100, line_magnitude
     """
     o = Timeseries("Noisy signal")  # Initialize output Timeseries
     o.time = series.time
-    o.params[TS_PARAMS_F_HZ] = series.params[TS_PARAMS_F_HZ]
+    o.params.update(series.params)
 
     # Generate random noise with desired characteristics
     num_samples = len(series.data)
@@ -571,9 +573,11 @@ def normalize(series):
     factor = 1 / (max(abs(np.max(series.data)), abs(np.min(series.data))))
 
     # Create the normalized time series
-    o = Timeseries("Normalized",
-                   data=series.data * factor,
-                   time=series.time)
+    o = Timeseries("Normalized", time = series.time)
+    o.params.update(series.params)
+    o_data = np.array(series.data)
+    o_data *= factor
+    o.data = o_data
 
     # Set amplitude range parameter
     o.params[TS_PARAMS_AMPL_RANGE] = [0, 1]

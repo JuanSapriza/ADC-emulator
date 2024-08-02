@@ -125,8 +125,8 @@ class ADC:
                                      data=series.data,
                                      time=series.time)
         self.conversion.params.update(series.params)
-        self.conversion.params[TS_PARAMS_SCORE_DR_BPS] = self.res_b*self.f_Hz
-        self.conversion.params[TS_PARAMS_SCORE_ENERGY_PER_OP_J] = self.epc_J
+        self.conversion.params[TS_PARAMS_SCORE_DR_BPS]  = self.res_b*self.f_Hz
+        self.conversion.params[TS_PARAMS_TIME_FORMAT]   = TIME_FORMAT_ABS_S
         # self.conversion.accumulate_param(TS_PARAMS_SCORE_ENERGY_TOTAL_J, self.epc_J*self.f_Hz*len(self.conversion.time))
 
     def measEnergy(self, series: Timeseries):

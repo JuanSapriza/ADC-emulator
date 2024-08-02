@@ -10,7 +10,6 @@ import pickle
 
 from ts_params import *
 
-
 class Timeseries:
     """
     Class for representing time series data.
