@@ -1,8 +1,20 @@
 import tracemalloc
 import itertools
 import time
+import signal
 from timeseries import *
 from copy import deepcopy
+
+TIMEOUT_S = 5
+
+# Timeout handler function
+def timeout_handler(signum, frame):
+    raise TimeoutError("Function call timed out")
+
+# Function to set the timeout
+def set_timeout(seconds):
+    signal.signal(signal.SIGALRM, timeout_handler)
+    signal.alarm(seconds)
 
 class Step()    :
     def __init__(self, name, operation, params_list_dict ):
@@ -29,10 +41,19 @@ class Step()    :
     def run(self, count=0, kamikaze=False):
         for in_signal in self.inputs:
             for params in self.params_list:
-                start_time = time.time()  # Capture start time
-                output = self.operation(in_signal, params)
-                end_time = time.time()    # Capture end time
-                latency = end_time - start_time
+
+                try:
+                    set_timeout(TIMEOUT_S)
+                    start_time = time.time()  # Capture start time
+                    output = self.operation(in_signal, params)
+                    end_time = time.time()    # Capture end time
+                    latency = end_time - start_time
+                except TimeoutError:
+                    print(f"❗⏳❗ {self.name} for {in_signal} and paramaters {params} took longer than {TIMEOUT_S} s!! {len(in_signal.time)} | {len(in_signal.data)} | Skipped :/")
+                    in_signal.print_params()
+                finally:
+                    signal.alarm(0)
+
 
                 self.latency += latency
 
@@ -234,3 +255,25 @@ def get_all_steps_recursive(parent_step):
 
     collect_steps(parent_step)
     return all_steps
+
+
+def run_and_save( initial_step, input_signals, filename, backwards=False ):
+    populate_recursive( initial_step )
+    print(f"Will input {len(input_signals)} series, do a max. of {get_run_length_recursive( initial_step )*len(input_signals)} runs, generating a total of {get_output_count_recursive( initial_step )*len(input_signals)} output signals")
+
+    if backwards:
+        run_steps_backwards( initial_step, input_signals )
+    else:
+        run_steps( initial_step, input_signals )
+
+    last_outputs = get_last_outputs( initial_step)
+
+    steps = get_all_steps_recursive(initial_step)
+
+    sum = 0
+    for s in steps:
+        print(f"{s.latency:0.3f} s\t{s.name}")
+        sum += s.latency
+    print(f"----------------\n    {sum:0.3f} s for {len(last_outputs)} outputs\n({sum/len(last_outputs):0.3f} s/output)")
+
+    save_series(last_outputs, filename, input_series = input_signals )

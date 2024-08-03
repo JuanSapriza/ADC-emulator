@@ -253,8 +253,6 @@ def lc_task_detect_spike_online(series, length=10, dt_n=0, Block=True):
     count = 0
     blocked = False
 
-    print(length, dt_n)
-
     o_time = []
     o_data = []
     for i in range(length, len(data)):
@@ -274,7 +272,7 @@ def lc_task_detect_spike_online(series, length=10, dt_n=0, Block=True):
 
 
 
-    PLOT = 1
+    PLOT = 0
     if PLOT:
         import matplotlib.pyplot as plt
         f = plt.figure(figsize=(10,3))
@@ -282,10 +280,8 @@ def lc_task_detect_spike_online(series, length=10, dt_n=0, Block=True):
         from sequences import get_child_from_step
         try:
             og = get_child_from_step(series, "LC ADC").params[TS_PARAMS_INPUT_SERIES]
-            print("ADC")
         except:
             og = get_child_from_step(series, "LC subsampling").params[TS_PARAMS_INPUT_SERIES]
-            print("Subsampled")
         [plt.axvline(l, color='gray', linestyle='-', alpha=0.2 ) for l in o_time ];
         scale = max(og.data)/10
         plt.plot(og.time, og.data, c='b', alpha=0.3)
