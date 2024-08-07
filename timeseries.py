@@ -7,6 +7,7 @@
 import numpy as np
 from copy import deepcopy
 import pickle
+import hashlib
 
 from ts_params import *
 
@@ -175,6 +176,15 @@ class Timeseries:
         d_b, t_b = max_d.bit_length(), max_t.bit_length()
         return d_b, t_b
 
+    def generate_unique_id(self):
+        """
+        Generates a unique ID for the timeseries by encoding its parameters keys and values.
+        It excludes the ID from the parameters to be encoded.
+        """
+        filtered_params = {key: value for key, value in self.params.items() if key != 'TS_PARAMS_ID'}
+        params_string = str(sorted(filtered_params.items())).encode()
+        self.params[TS_PARAMS_ID] = hashlib.md5(params_string).hexdigest()
+        self.params[TS_PARAMS_SHORT_ID] = self.params[TS_PARAMS_ID][-5:]
 
 def copy_series(series):
     """
@@ -188,70 +198,33 @@ def copy_series(series):
     """
     return deepcopy(series)
 
+catalog = {}
+
+def reset_catalog():
+    catalog = {}
+
+def update_catalog( series_list ):
+    # Create a dictionary to map IDs to TimeSeries objects for O(1) lookup time.
+    catalog_additions = {series.params[TS_PARAMS_ID]: series for series in series_list}
+    catalog.update(catalog_additions)
+
+def get_series_by_id(id):
+    """
+    Given a catalog of TimeSeries objects and a target ID, find and return the TimeSeries with that ID.
+
+    Args:
+        catalog (list of TimeSeries): The list containing TimeSeries objects.
+        id (str): The unique identifier to search for.
+
+    Returns:
+        TimeSeries: The TimeSeries object with the matching ID or None if not found.
+    """
+    # Return the TimeSeries object with the given ID, or None if the ID is not in the dictionary.
+    return catalog.get(id, None)
 
 def save_series(series, filename, input_series = []):
     import dill as pickle
-
     print("💾 Saving...")
-
-    def calculate_sizes_and_params(series):
-        sizes_MB = []
-        all_attributes = set()
-        params_sizes = {}  # This will store cumulative sizes of each key in `params`
-
-        # Measure the size of each attribute and each param for each instance
-        for s in series:
-            attr_sizes = {}
-            for attr_name, attr_value in s.__dict__.items():
-                if attr_name == 'params' and isinstance(attr_value, dict):
-                    for key, value in attr_value.items():
-                        size_mb = len(pickle.dumps(value)) / (1024**2)
-                        if key in params_sizes:
-                            params_sizes[key].append(size_mb)
-                        else:
-                            params_sizes[key] = [size_mb]
-                else:
-                    attr_size_mb = len(pickle.dumps(attr_value)) / (1024**2)
-                    attr_sizes[attr_name] = attr_size_mb
-                    all_attributes.add(attr_name)
-            # if sum(attr_sizes.values()) > 1: print(f"\n❗❗LARGE SERIES DETECTED! {sum(attr_sizes.values()):0.2f} MB -- {s.params[TS_PARAMS_STEP_HISTORY][-1]}")
-            sizes_MB.append(attr_sizes)
-
-        # Calculate average sizes for params
-        avg_params_sizes = {key: np.mean(values) for key, values in params_sizes.items()}
-        return sizes_MB, all_attributes, avg_params_sizes
-
-    def plot_sizes_and_params(series):
-        import matplotlib.pyplot as plt
-        sizes_MB, all_attributes, avg_params_sizes = calculate_sizes_and_params(series)
-        indices = range(len(series))
-
-        # Bar chart for attributes
-        plt.figure(figsize=(20, 6))
-        plt.subplot(1, 2, 1)  # First subplot for the bar chart
-        bottoms = np.zeros(len(series))
-
-        for attr in sorted(all_attributes):
-            attr_sizes = [item.get(attr, 0) for item in sizes_MB]
-            plt.bar(indices, attr_sizes, bottom=bottoms, label=attr)
-            bottoms += np.array(attr_sizes)
-
-        plt.title('Memory Usage of Each Time Series Signal')
-        plt.xlabel('Signal Index')
-        plt.ylabel("Size (MB)")
-        plt.legend(title="Attributes", loc="upper right")
-
-        # Pie chart for average params sizes
-        plt.subplot(1, 2, 2)  # Second subplot for the pie chart
-        labels = avg_params_sizes.keys()
-        sizes = avg_params_sizes.values()
-        plt.pie(sizes, labels=labels, autopct='%1.1f%%', startangle=140)
-        plt.title('Average Memory Usage Distribution in params')
-
-        plt.tight_layout()
-        plt.show()
-
-
     sizes_MB    = np.array([len(pickle.dumps(s.data))+len(pickle.dumps(s.time)) for s in series])/(1024**2)
     summ_MB     = len(pickle.dumps(series))/(1024**2)
     avg_size_MB = np.average(sizes_MB)
@@ -261,7 +234,7 @@ def save_series(series, filename, input_series = []):
     # plot_sizes_and_params(series)
 
     with open( filename, 'wb') as f:
-        pickle.dump( (series, input_series), f, protocol=pickle.HIGHEST_PROTOCOL)
+        pickle.dump( series, f, protocol=pickle.HIGHEST_PROTOCOL)
 
     print(f"Steps saved in {filename}")
 
@@ -270,5 +243,7 @@ def load_series(filename):
     import dill as pickle
     print("📂 Loading...")
     with open(filename, "rb") as f:
-        series, input_series = pickle.load(f)
-    return series, input_series
+        series = pickle.load(f)
+
+    update_catalog( series )
+    return series

@@ -1,3 +1,6 @@
+TS_PARAMS_ID                                = "ID"
+TS_PARAMS_SHORT_ID                          = "Abbreviated ID (not safe)"
+
 TS_PARAMS_F_HZ                              = "Frequency (Hz)"
 TS_PARAMS_SAMPLE_B                          = "Size per sample (bits)"
 TS_PARAMS_LENGTH_S                          = "Length (s)"

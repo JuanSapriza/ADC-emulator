@@ -277,16 +277,9 @@ def lc_task_detect_spike_online(series, length=10, dt_n=0, Block=True):
         import matplotlib.pyplot as plt
         f = plt.figure(figsize=(10,3))
         arr = lc_reconstruct_time(series)
-        from sequences import get_child_from_step
-        try:
-            og = get_child_from_step(series, "LC ADC").params[TS_PARAMS_INPUT_SERIES]
-        except:
-            og = get_child_from_step(series, "LC subsampling").params[TS_PARAMS_INPUT_SERIES]
         [plt.axvline(l, color='gray', linestyle='-', alpha=0.2 ) for l in o_time ];
-        scale = max(og.data)/10
-        plt.plot(og.time, og.data, c='b', alpha=0.3)
         [ plt.axhline(l, color='gray', linestyle='-', alpha=0.2 ) for l in series.params[TS_PARAMS_LC_LVLS] ];
-        [plt.arrow(t,0, dx=0,dy=d*scale, color='r') for t, d in zip(arr.time, arr.data) ];
+        [plt.arrow(t,0, dx=0,dy=d, color='r') for t, d in zip(arr.time, arr.data) ];
         plt.xlim(10,10.8)
         plt.show()
 

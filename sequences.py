@@ -5,6 +5,8 @@ import signal
 from timeseries import *
 from copy import deepcopy
 
+import hashlib
+
 TIMEOUT_S = 5
 
 # Timeout handler function
@@ -15,6 +17,12 @@ def timeout_handler(signum, frame):
 def set_timeout(seconds):
     signal.signal(signal.SIGALRM, timeout_handler)
     signal.alarm(seconds)
+
+def get_id():
+    i = 0
+    while(True):
+        yield i
+        i  += 1
 
 class Step()    :
     def __init__(self, name, operation, params_list_dict ):
@@ -58,11 +66,11 @@ class Step()    :
                 self.latency += latency
 
                 if output != None:
-                    output.params[ TS_PARAMS_STEP_HISTORY ].append(self.name)
-                    output.params[ TS_PARAMS_LATENCY_HISTORY ].append(latency)
-                    output.params[ TS_PARAMS_INPUT_SERIES ]     = in_signal
+                    output.params[ TS_PARAMS_STEP_HISTORY ]     .append(self.name)
+                    output.params[ TS_PARAMS_LATENCY_HISTORY ]  .append(latency)
                     output.params[ TS_PARAMS_OPERATION ]        = self.operation
-
+                    output.params[ TS_PARAMS_INPUT_SERIES ]     = in_signal.params[TS_PARAMS_ID]
+                    output.generate_unique_id()
                     if kamikaze and self.children_steps_left == 0:
                         output.data = []
                         output.time = []
@@ -73,56 +81,8 @@ class Step()    :
                 self.count += 1
                 print(f"\r{self.name}: {count}", end=" ")
         print(f"\n✅\t{self.name}\tOutput {len(self.outputs)} timeseries.\tTook {self.latency:0.3f} s",f"({self.latency/len(self.outputs):0.3f} s/Ts)." if len(self.outputs) != 0 else "")
+        update_catalog(self.outputs)
         return count
-
-    def run_single_input_single_output(self, in_signal, count=0, kamikaze=False ):
-        for params in self.params_list:
-            start_time = time.time()  # Capture start time
-            output = self.operation(in_signal, params)
-            end_time = time.time()    # Capture end time
-            latency = end_time - start_time
-
-            self.latency += latency
-            if output != None:
-                output.params[ TS_PARAMS_STEP_HISTORY ].append(self.name)
-                output.params[ TS_PARAMS_LATENCY_HISTORY ].append(latency)
-                output.params[ TS_PARAMS_INPUT_SERIES ]     = in_signal
-                output.params[ TS_PARAMS_OPERATION ]        = self.operation
-
-                if kamikaze and self.children_steps_left == 0:
-                    output.data = []
-                    output.time = []
-
-                self.outputs.append( output )
-                yield output
-            count += 1
-            self.count += 1
-
-    def run_single_input_all_output(self, in_signal, count=0, kamikaze=False ):
-        for params in self.params_list:
-            start_time = time.time()  # Capture start time
-            output = self.operation(in_signal, params)
-            end_time = time.time()    # Capture end time
-            latency = end_time - start_time
-
-            self.latency += latency
-            if output != None:
-                output.params[ TS_PARAMS_STEP_HISTORY ].append(self.name)
-                output.params[ TS_PARAMS_LATENCY_HISTORY ].append(latency)
-                output.params[ TS_PARAMS_INPUT_SERIES ]     = in_signal
-                output.params[ TS_PARAMS_OPERATION ]        = self.operation
-
-                if kamikaze and self.children_steps_left == 0:
-                    output.data = []
-                    output.time = []
-
-                self.outputs.append( output )
-
-            count += 1
-            self.count += 1
-            print(f"\r{self.name}: {count}", end=" ")
-        return count
-
 
     def copy(self):
         return deepcopy(self)
@@ -132,29 +92,6 @@ class Step()    :
         self.inputs = inputs
         count = self.run( count )
         return count
-
-
-def run_steps_backwards(step, initial_signals):
-
-    def run_recursive_backwards(step, signal, count ):
-        if step.children_steps != []:
-            outputs = step.run_single_input_single_output( signal )
-            for signal in outputs:
-                for child in step.children_steps:
-                    count = run_recursive_backwards(child, signal, count)
-                step.outputs[-1].data = []
-                step.outputs[-1].time = []
-        else:
-            count = step.run_single_input_all_output( signal, count=count, kamikaze = False )
-
-        return count
-
-    count = 0
-    for signal in initial_signals:
-        count = run_recursive_backwards( step, signal, count )
-
-
-
 
 def run_steps( step, initial_signals ):
     def run_steps_recursive( parent, count=0 ):
@@ -218,24 +155,24 @@ def filter_timeseries(timeseries_list, params_dict):
     filtered_timeseries = [ts for ts in timeseries_list if matches_params(ts, params_dict)]
     return filtered_timeseries
 
-def get_child_from_step(series, step):
-    """
-    Get a previous series from the current serie's history.
+# def get_child_from_step(series, step):
+#     """
+#     Get a previous series from the current serie's history.
 
-    :param series: The grand-child series
-    :param step: The step whose output you are looking for
-    :return: The series from the input one's history whose last step was the one specified. If
-    the desired step is not found, None is returned.
-    """
-    while( True ):
-        if series.params[TS_PARAMS_STEP_HISTORY][-1] == step:
-            break
-        else:
-            series = series.params[TS_PARAMS_INPUT_SERIES]
-        if len(series.params[TS_PARAMS_STEP_HISTORY]) == 1:
-            return None
+#     :param series: The grand-child series
+#     :param step: The step whose output you are looking for
+#     :return: The series ID from the input one's history whose last step was the one specified. If
+#     the desired step is not found, None is returned.
+#     """
+#     while( True ):
+#         if series.params[TS_PARAMS_STEP_HISTORY][-1] == step:
+#             break
+#         else:
+#             series = series.params[TS_PARAMS_INPUT_SERIES]
+#         if len(series.params[TS_PARAMS_STEP_HISTORY]) == 1:
+#             return None
 
-    return series
+#     return series
 
 
 
@@ -257,14 +194,11 @@ def get_all_steps_recursive(parent_step):
     return all_steps
 
 
-def run_and_save( initial_step, input_signals, filename, backwards=False ):
+def run_and_save( initial_step, input_signals, filename ):
     populate_recursive( initial_step )
     print(f"Will input {len(input_signals)} series, do a max. of {get_run_length_recursive( initial_step )*len(input_signals)} runs, generating a total of {get_output_count_recursive( initial_step )*len(input_signals)} output signals")
 
-    if backwards:
-        run_steps_backwards( initial_step, input_signals )
-    else:
-        run_steps( initial_step, input_signals )
+    run_steps( initial_step, input_signals )
 
     last_outputs = get_last_outputs( initial_step)
 
