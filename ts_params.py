@@ -61,6 +61,8 @@ TS_PARAMS_DET_FR_R_PEAK_AVG_SCOPE           = "FR R-peak detection Average scope
 
 TS_PARAMS_DET_LC_R_PEAK_LENGTH_N            = "LC R-peak detection Xings count"
 TS_PARAMS_DET_LC_R_PEAK_DT_S                = "LC R-peak detection Xings interval (s)"
+TS_PARAMS_DET_PEAK_LC_VAR_TIME              = "LC peak detection time variation"
+TS_PARAMS_DET_PEAK_LC_VAR_LEN               = "LC peak detection length variation"
 
 TS_PARAMS_DET_R_PEAK_SCORING_TOLERANCE      = "R-peak detection scoring tolerance"
 TS_PARAMS_DET_R_PEAK_SCORING_STRAT          = "R-peak detection scoring strategy"
