@@ -8,6 +8,7 @@ import numpy as np
 from copy import deepcopy
 import pickle
 import hashlib
+from logger import *
 
 from ts_params import *
 
@@ -157,7 +158,7 @@ class Timeseries:
         Prints the parameters of the TimeSeries object.
         """
         for k, v in self.params.items():
-            print(f"{k}\t{v}")
+            log(f"{k}\t{v}")
 
     def accumulate_param(self,  k, v):
         self.params[k] = self.params.get(k, 0) + v
@@ -230,24 +231,24 @@ def get_series_by_id(id):
 
 def save_series(series, filename, input_series = []):
     import dill as pickle
-    print("💾 Saving...")
+    log("💾 Saving...")
     sizes_MB    = np.array([len(pickle.dumps(s.data))+len(pickle.dumps(s.time)) for s in series])/(1024**2)
     summ_MB     = len(pickle.dumps(series))/(1024**2)
     avg_size_MB = np.average(sizes_MB)
     std_size_MB = np.std(sizes_MB)
-    print(f"Size: {summ_MB:0.1f} MB, {len(sizes_MB)} × avg: {avg_size_MB:0.1f} MB (std: {std_size_MB:0.1f} MB)")
+    log(f"Size: {summ_MB:0.1f} MB, {len(sizes_MB)} × avg: {avg_size_MB:0.1f} MB (std: {std_size_MB:0.1f} MB)")
 
     # plot_sizes_and_params(series)
 
     with open( filename, 'wb') as f:
         pickle.dump( series, f, protocol=pickle.HIGHEST_PROTOCOL)
 
-    print(f"Steps saved in {filename}")
+    log(f"Steps saved in {filename}")
 
 
 def load_series(filename):
     import dill as pickle
-    print("📂 Loading...")
+    log("📂 Loading...")
     with open(filename, "rb") as f:
         series = pickle.load(f)
 

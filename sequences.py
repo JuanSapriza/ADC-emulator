@@ -4,8 +4,7 @@ import time
 import signal
 from timeseries import *
 from copy import deepcopy
-
-import hashlib
+from logger import *
 
 TIMEOUT_S = 5
 
@@ -44,7 +43,7 @@ class Step()    :
         self.params_list            = [dict(zip(keys, combination)) for combination in itertools.product(*values)]
         self.outputs_count          = len(self.params_list)
         self.children_steps_left    = len(self.children_steps)
-        print(f"Populated {self.name} and would generate {self.outputs_count} outputs")
+        log(f"Populated {self.name} and would generate {self.outputs_count} outputs")
 
     def run(self, count=0, kamikaze=False):
         for in_signal in self.inputs:
@@ -57,7 +56,7 @@ class Step()    :
                     end_time = time.time()    # Capture end time
                     latency = end_time - start_time
                 except TimeoutError:
-                    print(f"❗⏳❗ {self.name} for {in_signal} and paramaters {params} took longer than {TIMEOUT_S} s!! {len(in_signal.time)} | {len(in_signal.data)} | Skipped :/")
+                    log(f"❗⏳❗ {self.name} for {in_signal} and paramaters {params} took longer than {TIMEOUT_S} s!! {len(in_signal.time)} | {len(in_signal.data)} | Skipped :/")
                     in_signal.print_params()
                 finally:
                     signal.alarm(0)
@@ -79,8 +78,8 @@ class Step()    :
 
                 count += 1
                 self.count += 1
-                print(f"\r{self.name}: {count}", end=" ")
-        print(f"\n✅\t{self.name}\tOutput {len(self.outputs)} timeseries.\tTook {self.latency:0.3f} s",f"({self.latency/len(self.outputs):0.3f} s/Ts)." if len(self.outputs) != 0 else "")
+                log(f"\r{self.name}: {count}", end=" ")
+        log(f"\n✅\t{self.name}\tOutput {len(self.outputs)} timeseries.\tTook {self.latency:0.3f} s",f"({self.latency/len(self.outputs):0.3f} s/Ts)." if len(self.outputs) != 0 else "")
         update_catalog(self.outputs)
         return count
 
@@ -104,7 +103,7 @@ def run_steps( step, initial_signals ):
     count = 0
     count = step.init( initial_signals, count )
     run_steps_recursive( step, count )
-    print("\rDone!\n")
+    log("\rDone!\n")
 
 def get_last_outputs( step ):
     def get_last_generation_recursive( parent, last_gen_list ):
@@ -196,7 +195,7 @@ def get_all_steps_recursive(parent_step):
 
 def run_and_save( initial_step, input_signals, filename, kamikaze=False ):
     populate_recursive( initial_step )
-    print(f"Will input {len(input_signals)} series, do a max. of {get_run_length_recursive( initial_step )*len(input_signals)} runs, generating a total of {get_output_count_recursive( initial_step )*len(input_signals)} output signals")
+    log(f"Will input {len(input_signals)} series, do a max. of {get_run_length_recursive( initial_step )*len(input_signals)} runs, generating a total of {get_output_count_recursive( initial_step )*len(input_signals)} output signals")
 
     run_steps( initial_step, input_signals )
 
@@ -210,8 +209,8 @@ def run_and_save( initial_step, input_signals, filename, kamikaze=False ):
 
     sum = 0
     for s in steps:
-        print(f"{s.latency:0.3f} s\t{s.name}")
+        log(f"{s.latency:0.3f} s\t{s.name}")
         sum += s.latency
-    print(f"----------------\n    {sum:0.3f} s for {len(last_outputs)} outputs\n({sum/len(last_outputs):0.3f} s/output)")
+    log(f"----------------\n    {sum:0.3f} s for {len(last_outputs)} outputs\n({sum/len(last_outputs):0.3f} s/output)")
 
     save_series(last_outputs, filename, input_series = input_signals )
