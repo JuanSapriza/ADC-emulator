@@ -65,10 +65,10 @@ class Step()    :
                 self.latency += latency
 
                 if output != None:
-                    output.params[ TS_PARAMS_STEP_HISTORY ]     .append(self.name)
-                    output.params[ TS_PARAMS_LATENCY_HISTORY ]  .append(latency)
-                    output.params[ TS_PARAMS_OPERATION ]        = self.operation
-                    output.params[ TS_PARAMS_INPUT_SERIES ]     = in_signal.params[TS_PARAMS_ID]
+                    output.params[ TSP_STEP_HISTORY ]     .append(self.name)
+                    output.params[ TSP_LATENCY_HISTORY ]  .append(latency)
+                    output.params[ TSP_OPERATION ]        = self.operation
+                    output.params[ TSP_INPUT_SERIES ]     = in_signal.params[TSP_ID]
                     output.generate_unique_id()
                     if kamikaze and self.children_steps_left == 0:
                         output.data = []
@@ -164,11 +164,11 @@ def filter_timeseries(timeseries_list, params_dict):
 #     the desired step is not found, None is returned.
 #     """
 #     while( True ):
-#         if series.params[TS_PARAMS_STEP_HISTORY][-1] == step:
+#         if series.params[TSP_STEP_HISTORY][-1] == step:
 #             break
 #         else:
-#             series = series.params[TS_PARAMS_INPUT_SERIES]
-#         if len(series.params[TS_PARAMS_STEP_HISTORY]) == 1:
+#             series = series.params[TSP_INPUT_SERIES]
+#         if len(series.params[TSP_STEP_HISTORY]) == 1:
 #             return None
 
 #     return series

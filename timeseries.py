@@ -60,10 +60,10 @@ class Timeseries:
             length_s = len(time) / f_Hz
 
         self.params = {
-            TS_PARAMS_F_HZ: f_Hz,
-            TS_PARAMS_LENGTH_S: length_s,
-            TS_PARAMS_STEP_HISTORY: [],
-            TS_PARAMS_LATENCY_HISTORY: [],
+            TSP_F_HZ: f_Hz,
+            TSP_LENGTH_S: length_s,
+            TSP_STEP_HISTORY: [],
+            TSP_LATENCY_HISTORY: [],
         }
 
 
@@ -182,10 +182,10 @@ class Timeseries:
         Generates a unique ID for the timeseries by encoding its parameters keys and values.
         It excludes the ID from the parameters to be encoded.
         """
-        filtered_params = {key: value for key, value in self.params.items() if key != 'TS_PARAMS_ID'}
+        filtered_params = {key: value for key, value in self.params.items() if key != 'TSP_ID'}
         params_string = str(sorted(filtered_params.items())).encode()
-        self.params[TS_PARAMS_ID] = hashlib.md5(params_string).hexdigest()
-        self.params[TS_PARAMS_SHORT_ID] = self.params[TS_PARAMS_ID][-5:]
+        self.params[TSP_ID] = hashlib.md5(params_string).hexdigest()
+        self.params[TSP_SHORT_ID] = self.params[TSP_ID][-5:]
 
     def limit_to_metadata(self):
         self.len_time = len(self.time)
@@ -212,7 +212,7 @@ def reset_catalog():
 
 def update_catalog( series_list ):
     # Create a dictionary to map IDs to TimeSeries objects for O(1) lookup time.
-    catalog_additions = {series.params[TS_PARAMS_ID]: series for series in series_list}
+    catalog_additions = {series.params[TSP_ID]: series for series in series_list}
     catalog.update(catalog_additions)
 
 def get_series_by_id(id):

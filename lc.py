@@ -26,16 +26,16 @@ def lcadc_fraction(series, params ):
     Returns:
         Timeseries: Level crossing time series.
     '''
-    lvl_w = (np.abs(series.params[TS_PARAMS_AMPL_RANGE][1])+np.abs(series.params[TS_PARAMS_AMPL_RANGE][0])) / params[TS_PARAMS_LC_LVL_W_FRACT]
-    lvls = list(np.arange(series.params[TS_PARAMS_AMPL_RANGE][0], series.params[TS_PARAMS_AMPL_RANGE][1], lvl_w))
+    lvl_w = (np.abs(series.params[TSP_AMPL_RANGE][1])+np.abs(series.params[TSP_AMPL_RANGE][0])) / params[TSP_LC_LVL_W_FRACT]
+    lvls = list(np.arange(series.params[TSP_AMPL_RANGE][0], series.params[TSP_AMPL_RANGE][1], lvl_w))
     o = Timeseries("LC fraction")
     o.params.update(series.params)
-    o.params[TS_PARAMS_LC_LVLS]     = lvls
-    o.params[TS_PARAMS_START_S]     = series.time[0]
-    o.params[TS_PARAMS_END_S]       = series.time[-1]
-    o.params[TS_PARAMS_TIME_FORMAT] = TIME_FORMAT_DIFF_TM_N
+    o.params[TSP_LC_LVLS]     = lvls
+    o.params[TSP_START_S]     = series.time[0]
+    o.params[TSP_END_S]       = series.time[-1]
+    o.params[TSP_TIME_FORMAT] = TIME_FORMAT_DIFF_TM_N
 
-    MAX_TIME = 2**params[TS_PARAMS_LC_ACQ_TIME_B]
+    MAX_TIME = 2**params[TSP_LC_ACQ_TIME_B]
 
     current_level = np.trunc(series.data[0] / lvl_w)  # Level number in the list.
     last_sample = 0
@@ -47,14 +47,14 @@ def lcadc_fraction(series, params ):
         dir = np.sign(diff)
         diff = abs(diff)
         analog_samples = i - last_sample # - 1
-        timer_samples = max(1, np.round( analog_samples * params[TS_PARAMS_TIMER_F_HZ] / series.params[TS_PARAMS_F_HZ] ) )
+        timer_samples = max(1, np.round( analog_samples * params[TSP_TIMER_F_HZ] / series.params[TSP_F_HZ] ) )
 
         consecutives = 0
         while diff > 0 or timer_samples >= MAX_TIME:
             o_data.append(dir)
             current_level = current_level + dir
             analog_samples = i - last_sample # - 1
-            timer_samples = timer_samples = max(1,np.round( analog_samples * params[TS_PARAMS_TIMER_F_HZ] / series.params[TS_PARAMS_F_HZ] )) + consecutives
+            timer_samples = timer_samples = max(1,np.round( analog_samples * params[TSP_TIMER_F_HZ] / series.params[TSP_F_HZ] )) + consecutives
             o_time.append(timer_samples)
             last_sample = i
             diff -= 1
@@ -62,7 +62,7 @@ def lcadc_fraction(series, params ):
             consecutives += 1
     o.data = np.array(o_data, dtype=np.int16)
     o.time = np.array(o_time, dtype=np.int16)
-    o.params[TS_PARAMS_LC_ACQ_F_HZ] = len(o.data) / series.params[TS_PARAMS_LENGTH_S]
+    o.params[TSP_LC_ACQ_F_HZ] = len(o.data) / series.params[TSP_LENGTH_S]
     return o.copy()
 
 '''```````````````````````````````
@@ -85,25 +85,25 @@ def lc_subsampler_fraction( series, params ):
     Returns:
         Timeseries: Level crossing time series.
     '''
-    fraction_b = np.log2(params[TS_PARAMS_LC_LVL_W_FRACT])
-    sample_b = int(series.params[TS_PARAMS_SAMPLE_B])
+    fraction_b = np.log2(params[TSP_LC_LVL_W_FRACT])
+    sample_b = int(series.params[TSP_SAMPLE_B])
     if sample_b <= fraction_b: return None
     lvl_w_b = sample_b - fraction_b
     lvl_w = int(2**lvl_w_b)
     o = Timeseries("LC in C from fraction")
     o.params.update(series.params)
-    o.params[TS_PARAMS_LC_LVLS]         = list(range(0, 2**sample_b, lvl_w))
-    o.params[TS_PARAMS_START_S]         = series.time[0]
-    o.params[TS_PARAMS_END_S]           = series.time[-1]
-    o.params[TS_PARAMS_TIME_FORMAT]     = TIME_FORMAT_DIFF_FS_N
+    o.params[TSP_LC_LVLS]         = list(range(0, 2**sample_b, lvl_w))
+    o.params[TSP_START_S]         = series.time[0]
+    o.params[TSP_END_S]           = series.time[-1]
+    o.params[TSP_TIME_FORMAT]     = TIME_FORMAT_DIFF_FS_N
 
     current_lvl = 0  # The last level to be crossed.
     dir = 0  # The direction of the crossing (1=up, 0=down). THIS SIGNAL SHOULD BE EXPOSED.
     xings = 0  # The count of crossings between two consecutive samples.
     skipped = 0  # The count of samples that did not cross any level. Reset on every crossing.
 
-    MAX_SKIP = 2**params[TS_PARAMS_LC_ACQ_TIME_B] -1
-    MAX_XING = 2**params[TS_PARAMS_LC_ACQ_AMP_B] -1
+    MAX_SKIP = 2**params[TSP_LC_ACQ_TIME_B] -1
+    MAX_XING = 2**params[TSP_LC_ACQ_AMP_B] -1
 
     o_data = []
     o_time = []
@@ -125,7 +125,7 @@ def lc_subsampler_fraction( series, params ):
 
     o.data = np.array(o_data, dtype=np.int16)
     o.time = np.array(o_time, dtype=np.int16)
-    o.params[TS_PARAMS_LC_ACQ_F_HZ] = len(o.data) / series.params[TS_PARAMS_LENGTH_S]
+    o.params[TSP_LC_ACQ_F_HZ] = len(o.data) / series.params[TSP_LENGTH_S]
     return o.copy()
 
 def lc_subsampler_fraction_half_lsb( series, params ):
@@ -144,24 +144,24 @@ def lc_subsampler_fraction_half_lsb( series, params ):
     Returns:
         Timeseries: Level crossing time series.
     '''
-    fraction_b = np.log2(params[TS_PARAMS_LC_LVL_W_FRACT])
-    sample_b = int(series.params[TS_PARAMS_SAMPLE_B])
+    fraction_b = np.log2(params[TSP_LC_LVL_W_FRACT])
+    sample_b = int(series.params[TSP_SAMPLE_B])
     lvl_w_b = sample_b - fraction_b
     lvl_w = int(2**lvl_w_b)
     o = Timeseries("LC in C from fraction")
     o.params.update(series.params)
-    o.params[TS_PARAMS_LC_LVLS]         = list(range(0, 2**sample_b, lvl_w))
-    o.params[TS_PARAMS_START_S]         = series.time[0]
-    o.params[TS_PARAMS_END_S]           = series.time[-1]
-    o.params[TS_PARAMS_TIME_FORMAT]     = TIME_FORMAT_DIFF_FS_N
+    o.params[TSP_LC_LVLS]         = list(range(0, 2**sample_b, lvl_w))
+    o.params[TSP_START_S]         = series.time[0]
+    o.params[TSP_END_S]           = series.time[-1]
+    o.params[TSP_TIME_FORMAT]     = TIME_FORMAT_DIFF_FS_N
 
     current_lvl = 0  # The last level to be crossed.
     dir = 0  # The direction of the crossing (1=up, 0=down). THIS SIGNAL SHOULD BE EXPOSED.
     xings = 0  # The count of crossings between two consecutive samples.
     skipped = 0  # The count of samples that did not cross any level. Reset on every crossing.
 
-    MAX_SKIP = 2**params[TS_PARAMS_LC_ACQ_TIME_B] -1
-    MAX_XING = 2**params[TS_PARAMS_LC_ACQ_AMP_B] -1
+    MAX_SKIP = 2**params[TSP_LC_ACQ_TIME_B] -1
+    MAX_XING = 2**params[TSP_LC_ACQ_AMP_B] -1
 
     o_data = []
     o_time = []
@@ -184,7 +184,7 @@ def lc_subsampler_fraction_half_lsb( series, params ):
 
     o.data = np.array(o_data, dtype=np.int16)
     o.time = np.array(o_time, dtype=np.int16)
-    o.params[TS_PARAMS_LC_ACQ_F_HZ] = len(o.data) / series.params[TS_PARAMS_LENGTH_S]
+    o.params[TSP_LC_ACQ_F_HZ] = len(o.data) / series.params[TSP_LENGTH_S]
     return o.copy()
 
 '''```````````````````````````````
@@ -204,7 +204,7 @@ def lc_task_detect_spike(series, length=10, dt_s=0.025):
         list: Indices of detected spikes.
     '''
     data = series.data[1:]
-    time = np.array(series.time[1:]) / series.params[TS_PARAMS_F_HZ]
+    time = np.array(series.time[1:]) / series.params[TSP_F_HZ]
 
     switch_indexes = []
     current_value = data[0]
@@ -245,9 +245,9 @@ def lc_task_detect_spike_online(series, length=10, dt_n=0, Block=True):
 
     series_time = series.time[1:]
     try:
-        f_Hz = series.params[TS_PARAMS_TIMER_F_HZ]
+        f_Hz = series.params[TSP_TIMER_F_HZ]
     except:
-        f_Hz = series.params[TS_PARAMS_F_HZ]
+        f_Hz = series.params[TSP_F_HZ]
     time = (np.array(series.time)) / f_Hz
 
     count = 0
@@ -260,7 +260,7 @@ def lc_task_detect_spike_online(series, length=10, dt_n=0, Block=True):
             count += abs(data[i-1])
             if count >= length:
                 if not blocked:
-                    o_time.append(series.params[TS_PARAMS_START_S] + sum(np.array(time[:i+1])))
+                    o_time.append(series.params[TSP_START_S] + sum(np.array(time[:i+1])))
                     o_data.append(count)
                     count, blocked = 0, Block
                 else:
@@ -278,7 +278,7 @@ def lc_task_detect_spike_online(series, length=10, dt_n=0, Block=True):
         f = plt.figure(figsize=(10,3))
         arr = lc_reconstruct_time(series)
         [plt.axvline(l, color='gray', linestyle='-', alpha=0.2 ) for l in o_time ];
-        [ plt.axhline(l, color='gray', linestyle='-', alpha=0.2 ) for l in series.params[TS_PARAMS_LC_LVLS] ];
+        [ plt.axhline(l, color='gray', linestyle='-', alpha=0.2 ) for l in series.params[TSP_LC_LVLS] ];
         [plt.arrow(t,0, dx=0,dy=d, color='r') for t, d in zip(arr.time, arr.data) ];
         plt.xlim(10,10.8)
         plt.show()
@@ -340,15 +340,15 @@ def lc_reconstruct(series):
     '''
     o = Timeseries(series.name + " LCrecTime")
     o.params.update(series.params)
-    o.params[TS_PARAMS_TIME_FORMAT] = TIME_FORMAT_ABS_S
-    o_time = [ series.params[TS_PARAMS_START_S]]
-    lvl_w = series.params[TS_PARAMS_LC_LVLS][1]
+    o.params[TSP_TIME_FORMAT] = TIME_FORMAT_ABS_S
+    o_time = [ series.params[TSP_START_S]]
+    lvl_w = series.params[TSP_LC_LVLS][1]
     o_data = [series.data[0]*lvl_w]
 
     try:
-        f_Hz = series.params[TS_PARAMS_TIMER_F_HZ]
+        f_Hz = series.params[TSP_TIMER_F_HZ]
     except:
-        f_Hz = series.params[TS_PARAMS_F_HZ]
+        f_Hz = series.params[TSP_F_HZ]
 
     for i in range(0, len(series.data)):
         if series.time[i] == 0:
@@ -373,13 +373,13 @@ def lc_reconstruct_time(series):
     '''
     o = Timeseries(series.name + " LCrecTime")
     o.params.update(series.params)
-    o.params[TS_PARAMS_TIME_FORMAT] = TIME_FORMAT_ABS_S
-    o_time = [ series.params[TS_PARAMS_START_S]]
+    o.params[TSP_TIME_FORMAT] = TIME_FORMAT_ABS_S
+    o_time = [ series.params[TSP_START_S]]
     o_data = [0]
 
-    try: o.params[TS_PARAMS_F_HZ] = series.params[TS_PARAMS_TIMER_F_HZ]
+    try: o.params[TSP_F_HZ] = series.params[TSP_TIMER_F_HZ]
     except: pass
-    f_Hz = o.params[TS_PARAMS_F_HZ]
+    f_Hz = o.params[TSP_F_HZ]
 
     for i in range(0, len(series.data)):
         if series.time[i] == 0:
@@ -406,17 +406,17 @@ def lc_rec_zoh_fmin(series):
     '''
     o = Timeseries(series.name + " rec. ZOH fmin")
     o.params.update(series.params)
-    o.params[TS_PARAMS_TIME_FORMAT] = TIME_FORMAT_ABS_S
+    o.params[TSP_TIME_FORMAT] = TIME_FORMAT_ABS_S
 
-    t_min_s = (min(series.time)+1)/series.params[TS_PARAMS_F_HZ]
-    start_s = series.params[TS_PARAMS_START_S]
-    end_s   = series.params[TS_PARAMS_END_S]
+    t_min_s = (min(series.time)+1)/series.params[TSP_F_HZ]
+    start_s = series.params[TSP_START_S]
+    end_s   = series.params[TSP_END_S]
 
-    in_time = start_s + np.cumsum( series.time / series.params[TS_PARAMS_F_HZ] )
+    in_time = start_s + np.cumsum( series.time / series.params[TSP_F_HZ] )
     o_time = np.arange(start_s, end_s, t_min_s)
 
     lvl = 0  # <<<<<<<<<<<<<<< FIX THIS
-    lvls = series.params[TS_PARAMS_LC_LVLS]
+    lvls = series.params[TSP_LC_LVLS]
     o_data = []
 
     # Apply zero-order hold
@@ -448,16 +448,16 @@ def lc_rec_linear_interp(series):
     '''
     o = Timeseries(series.name + " rec. Linear Interpolation")
     o.params.update(series.params)
-    o.params[TS_PARAMS_TIME_FORMAT] = TIME_FORMAT_ABS_S
+    o.params[TSP_TIME_FORMAT] = TIME_FORMAT_ABS_S
 
-    t_min_s = (min(series.time)+1)/series.params[TS_PARAMS_F_HZ]
-    start_s = series.params[TS_PARAMS_START_S]
-    end_s   = series.params[TS_PARAMS_END_S]
+    t_min_s = (min(series.time)+1)/series.params[TSP_F_HZ]
+    start_s = series.params[TSP_START_S]
+    end_s   = series.params[TSP_END_S]
 
-    in_time = start_s + np.cumsum(series.time / series.params[TS_PARAMS_F_HZ])
+    in_time = start_s + np.cumsum(series.time / series.params[TSP_F_HZ])
     o_time = np.arange(start_s, end_s, t_min_s)
 
-    lvls = series.params[TS_PARAMS_LC_LVLS]
+    lvls = series.params[TSP_LC_LVLS]
     o_data = np.zeros_like(o_time, dtype=int)
 
     # Initialize current level based on initial conditions
@@ -511,16 +511,16 @@ def lc_rec_poly_interp(series, order):
     '''
     o = Timeseries(series.name + f" rec. Poly Interp order {order}")
     o.params.update(series.params)
-    o.params[TS_PARAMS_TIME_FORMAT] = TIME_FORMAT_ABS_S
+    o.params[TSP_TIME_FORMAT] = TIME_FORMAT_ABS_S
 
-    t_min_s = (min(series.time)+1)/series.params[TS_PARAMS_F_HZ]
-    start_s = series.params[TS_PARAMS_START_S]
-    end_s   = series.params[TS_PARAMS_END_S]
+    t_min_s = (min(series.time)+1)/series.params[TSP_F_HZ]
+    start_s = series.params[TSP_START_S]
+    end_s   = series.params[TSP_END_S]
 
-    in_time = start_s + np.cumsum(series.time / series.params[TS_PARAMS_F_HZ])
+    in_time = start_s + np.cumsum(series.time / series.params[TSP_F_HZ])
     o_time = np.arange(start_s, end_s, t_min_s)
 
-    lvls = series.params[TS_PARAMS_LC_LVLS]
+    lvls = series.params[TSP_LC_LVLS]
     o_data = np.zeros_like(o_time, dtype=int)
 
     # Initialize current level based on initial conditions
@@ -574,8 +574,8 @@ def rec_zoh_fmin(series):
 
     if len(series.time) < 2 : return None
     t_min_s = min(np.diff(series.time))
-    start_s = series.params[TS_PARAMS_START_S]
-    end_s   = series.params[TS_PARAMS_END_S]
+    start_s = series.params[TSP_START_S]
+    end_s   = series.params[TSP_END_S]
 
     o_time = np.arange(start_s, end_s, t_min_s)
     o_data = []
@@ -592,7 +592,7 @@ def rec_zoh_fmin(series):
         value = series.data[i]
     o.data = np.array(o_data)
     o.time = np.array(o_time)
-    o.params[TS_PARAMS_F_HZ] = 1/t_min_s
+    o.params[TSP_F_HZ] = 1/t_min_s
     return o.copy()
 
 
@@ -613,8 +613,8 @@ def rec_linear_fmin(series):
 
     if len(series.time) < 2 : return None
     t_min_s = min(np.diff(series.time))
-    start_s = series.params[TS_PARAMS_START_S]
-    end_s   = series.params[TS_PARAMS_END_S]
+    start_s = series.params[TSP_START_S]
+    end_s   = series.params[TSP_END_S]
 
     o_time = np.arange(start_s, end_s, t_min_s)
     o_data = np.zeros_like(o_time, dtype=int)
@@ -628,5 +628,5 @@ def rec_linear_fmin(series):
 
     o.data = np.array(o_data)
     o.time = np.array(o_time)
-    o.params[TS_PARAMS_F_HZ] = 1/t_min_s
+    o.params[TSP_F_HZ] = 1/t_min_s
     return o.copy()

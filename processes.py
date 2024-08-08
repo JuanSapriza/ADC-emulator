@@ -70,8 +70,8 @@ def neo(series, win):
         Timeseries: Time series after NEO operation.
     """
     o = Timeseries(series.name + " NEO")
-    o.params[TS_PARAMS_F_HZ] = series.params[TS_PARAMS_F_HZ]
-    t_diff = int(o.params[TS_PARAMS_F_HZ] * win)
+    o.params[TSP_F_HZ] = series.params[TSP_F_HZ]
+    t_diff = int(o.params[TSP_F_HZ] * win)
     o_data = []
     o_time = []
 
@@ -99,8 +99,8 @@ def aso(series, win):
         Timeseries: Time series after ASO operation.
     """
     o = Timeseries(series.name + " ASO")
-    o.params[TS_PARAMS_F_HZ] = series.params[TS_PARAMS_F_HZ]
-    t_diff = int(o.params[TS_PARAMS_F_HZ] * win)
+    o.params[TSP_F_HZ] = series.params[TSP_F_HZ]
+    t_diff = int(o.params[TSP_F_HZ] * win)
     o_data = []
     o_time = []
 
@@ -128,8 +128,8 @@ def as2o(series, win):
         Timeseries: Time series after AS2O operation.
     """
     o = Timeseries(series.name + " AS2O")
-    o.params[TS_PARAMS_F_HZ] = series.params[TS_PARAMS_F_HZ]
-    t_diff = int(o.params[TS_PARAMS_F_HZ] * win) if o.params[TS_PARAMS_F_HZ] != 0 else win
+    o.params[TSP_F_HZ] = series.params[TSP_F_HZ]
+    t_diff = int(o.params[TSP_F_HZ] * win) if o.params[TSP_F_HZ] != 0 else win
     o_data = []
     o_time = []
 
@@ -157,8 +157,8 @@ def needle(series, win):
         Timeseries: Processed time series.
     """
     o = Timeseries(series.name + " needle'd")
-    o.params[TS_PARAMS_F_HZ] = series.params[TS_PARAMS_F_HZ]
-    t_diff = int(o.params[TS_PARAMS_F_HZ] * win) if o.params[TS_PARAMS_F_HZ] != 0 else win
+    o.params[TSP_F_HZ] = series.params[TSP_F_HZ]
+    t_diff = int(o.params[TSP_F_HZ] * win) if o.params[TSP_F_HZ] != 0 else win
     k = Timeseries("inflections")
 
     d = np.zeros(len(series.data))
@@ -281,7 +281,7 @@ def lpf_butter(series, cutoff, order):
     o.params.update(series.params)
 
     # Normalize the cutoff frequency with respect to the Nyquist frequency
-    nyquist = 0.5 * series.params[TS_PARAMS_F_HZ]
+    nyquist = 0.5 * series.params[TSP_F_HZ]
     normal_cutoff = cutoff / nyquist
 
     # Create Butterworth filter coefficients
@@ -332,7 +332,7 @@ def bpf_butter(series, lowcut, highcut, order=4):
     o.params.update(series.params)
 
     # Create Butterworth bandpass filter coefficients
-    b, a = butter_bandpass(lowcut, highcut, series.params[TS_PARAMS_F_HZ], order=order)
+    b, a = butter_bandpass(lowcut, highcut, series.params[TSP_F_HZ], order=order)
 
     # Apply the filter to the data
     o.data = filtfilt(b, a, series.data)
@@ -372,9 +372,9 @@ def offset_to_pos_and_map(series, bits):
     Returns:
         Timeseries: Timeseries with positive offset values mapped to the specified number of bits.
     """
-    o = Timeseries(series.name + " map abs", time=series.time, f_Hz=series.params[TS_PARAMS_F_HZ])
+    o = Timeseries(series.name + " map abs", time=series.time, f_Hz=series.params[TSP_F_HZ])
     o.params.update(series.params)
-    o.params[TS_PARAMS_SAMPLE_B] = bits
+    o.params[TSP_SAMPLE_B] = bits
 
     # Ensure data is a numpy array of type float32
     data = np.array(series.data, dtype=np.float32)
@@ -440,11 +440,11 @@ def oversample(series, order, interpolation=interpolate.interp1d):
 
     # Update parameters for oversampled data
     o.params.update(series.params)
-    o.params[TS_PARAMS_F_HZ] = series.params[TS_PARAMS_F_HZ] * order
+    o.params[TSP_F_HZ] = series.params[TSP_F_HZ] * order
 
     # Cubic spline interpolation of the input data to oversample
     spline = interpolation(series.time, series.data)
-    num_points = int((series.time[-1] - series.time[0]) * o.params[TS_PARAMS_F_HZ]) + 1
+    num_points = int((series.time[-1] - series.time[0]) * o.params[TSP_F_HZ]) + 1
     o.time = np.linspace(series.time[0], series.time[-1], num_points)
     o.data = spline(o.time)
 
@@ -510,7 +510,7 @@ def add_noise(series, drop_rate_dBpdec=-3, initial_magnitude=100, line_magnitude
 
     # Generate random noise with desired characteristics
     num_samples = len(series.data)
-    freqs = np.fft.fftfreq(num_samples, 1 / series.params[TS_PARAMS_F_HZ])
+    freqs = np.fft.fftfreq(num_samples, 1 / series.params[TSP_F_HZ])
     magnitude = initial_magnitude / (1 + (freqs / 1) ** 2) ** (abs(drop_rate_dBpdec) / 20)  # Magnitude with drop rate
     phase = np.random.uniform(0, 2 * np.pi, num_samples)  # Random phase
     spectrum = magnitude * np.exp(1j * phase)
@@ -526,8 +526,8 @@ def add_noise(series, drop_rate_dBpdec=-3, initial_magnitude=100, line_magnitude
     o.data = series.data + total_noise
 
     # Set noise parameters
-    o.params[TS_PARAMS_NOISE_DROP_RATE_DBPDEC] = drop_rate_dBpdec
-    o.params[TS_PARAMS_NOISE_DC_COMP] = initial_magnitude
+    o.params[TSP_NOISE_DROP_RATE_DBPDEC] = drop_rate_dBpdec
+    o.params[TSP_NOISE_DC_COMP] = initial_magnitude
 
     return o.copy()
 
@@ -580,7 +580,7 @@ def normalize(series):
     o.data = o_data
 
     # Set amplitude range parameter
-    o.params[TS_PARAMS_AMPL_RANGE] = [0, 1]
+    o.params[TSP_AMPL_RANGE] = [0, 1]
 
     return o.copy(), factor
 
@@ -602,7 +602,7 @@ def normalize_01(series):
 
     o.data = (series.data - min_val) / (max_val - min_val)
     o.time = series.time
-    o.params[TS_PARAMS_AMPL_RANGE] = [0,1]
+    o.params[TSP_AMPL_RANGE] = [0,1]
     return o.copy()
 
 

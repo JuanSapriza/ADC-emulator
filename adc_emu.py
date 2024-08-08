@@ -125,9 +125,9 @@ class ADC:
                                      data=series.data,
                                      time=series.time)
         self.conversion.params.update(series.params)
-        self.conversion.params[TS_PARAMS_SCORE_DR_BPS]  = self.res_b*self.f_Hz
-        self.conversion.params[TS_PARAMS_TIME_FORMAT]   = TIME_FORMAT_ABS_S
-        # self.conversion.accumulate_param(TS_PARAMS_SCORE_ENERGY_TOTAL_J, self.epc_J*self.f_Hz*len(self.conversion.time))
+        self.conversion.params[TSP_SCORE_DR_BPS]  = self.res_b*self.f_Hz
+        self.conversion.params[TSP_TIME_FORMAT]   = TIME_FORMAT_ABS_S
+        # self.conversion.accumulate_param(TSP_SCORE_ENERGY_TOTAL_J, self.epc_J*self.f_Hz*len(self.conversion.time))
 
     def measEnergy(self, series: Timeseries):
         '''
@@ -166,7 +166,7 @@ class ADC:
         o.data = resampled_data
         o.time = timestamps
         o.params.update(series.params)
-        o.params[TS_PARAMS_F_HZ] = f_Hz
+        o.params[TSP_F_HZ] = f_Hz
         return o.copy()
 
     def clip(self, series: Timeseries):
@@ -221,8 +221,8 @@ class ADC:
 
         o = Timeseries(series.name + f" Q({self.res_b})", data=quantized_data, time=series.time)
         o.params.update(series.params)
-        o.params[TS_PARAMS_SAMPLE_B] = self.res_b
-        o.params[TS_PARAMS_AMPL_RANGE] = [0, 2**self.res_b - 1] if not self.signed else [-2**(self.res_b - 1), 2**(self.res_b - 1) - 1]
+        o.params[TSP_SAMPLE_B] = self.res_b
+        o.params[TSP_AMPL_RANGE] = [0, 2**self.res_b - 1] if not self.signed else [-2**(self.res_b - 1), 2**(self.res_b - 1) - 1]
         return o.copy()
 
     def quantize_val(self, value, approximation):
@@ -298,9 +298,9 @@ class mcADC:
             Timeseries: TDM time series.
         '''
         s = self.channels[0].conversion
-        f_tdm_Hz = s.params[TS_PARAMS_F_HZ] * len(self.channels)
+        f_tdm_Hz = s.params[TSP_F_HZ] * len(self.channels)
         T_tdm_s = 1 / f_tdm_Hz
-        length_s = len(s.data) * (1 / s.params[TS_PARAMS_F_HZ])
+        length_s = len(s.data) * (1 / s.params[TSP_F_HZ])
         time = np.arange(0, length_s, T_tdm_s)
         data = []
 
