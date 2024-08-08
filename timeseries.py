@@ -186,6 +186,12 @@ class Timeseries:
         self.params[TS_PARAMS_ID] = hashlib.md5(params_string).hexdigest()
         self.params[TS_PARAMS_SHORT_ID] = self.params[TS_PARAMS_ID][-5:]
 
+    def limit_to_metadata(self):
+        self.len_time = len(self.time)
+        self.len_data = len(self.data)
+        self.time = []
+        self.data = []
+
 def copy_series(series):
     """
     Creates a deep copy of the input time series.

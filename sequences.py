@@ -194,13 +194,17 @@ def get_all_steps_recursive(parent_step):
     return all_steps
 
 
-def run_and_save( initial_step, input_signals, filename ):
+def run_and_save( initial_step, input_signals, filename, kamikaze=False ):
     populate_recursive( initial_step )
     print(f"Will input {len(input_signals)} series, do a max. of {get_run_length_recursive( initial_step )*len(input_signals)} runs, generating a total of {get_output_count_recursive( initial_step )*len(input_signals)} output signals")
 
     run_steps( initial_step, input_signals )
 
     last_outputs = get_last_outputs( initial_step)
+
+    if kamikaze:
+        for r in last_outputs:
+            r.limit_to_metadata()
 
     steps = get_all_steps_recursive(initial_step)
 
