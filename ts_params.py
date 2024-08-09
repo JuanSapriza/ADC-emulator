@@ -37,7 +37,7 @@ TSP_SCORE_MEMORY_USAGE_B              = "Total memory usage over the execution p
 TSP_SCORE_ASM_OPS                     = "Accumulated number of assmebly-code isntructions"
 TSP_SCORE_MIN_FREQUENCY_HZ            = "Minimum frequency at which the system needs to run (Hz)"
 TSP_SCORE_ENERGY_J                    = "Total energy consumption of the task (J)"
-TSP_SCORE_ENERGY_W                    = "Total power consumption during the task (W)"
+TSP_SCORE_POWER_W                     = "Total power consumption during the task (W)"
 
 TSP_SELECTED_SCORES                   = "Scores selected for total score"
 TSP_SCORE_TOTAL                       = "Total score (product of selected scores)"
