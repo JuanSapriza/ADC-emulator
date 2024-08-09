@@ -28,6 +28,9 @@ def log(message, end="\n"):
 
 def dump_log():
     global log_buffer
+
+    log(f"\n\n--------------------------\n{datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}\n--------------------------\n\n")
+
     # Write buffer to file and clear it
     with open(filepath, 'a') as file:
         file.writelines(log_buffer)
