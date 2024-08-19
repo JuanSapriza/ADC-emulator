@@ -236,9 +236,7 @@ def save_series(series, filename, input_series = []):
     summ_MB     = len(pickle.dumps(series))/(1024**2)
     avg_size_MB = np.average(sizes_MB)
     std_size_MB = np.std(sizes_MB)
-    log(f"Size: {summ_MB:0.1f} MB, {len(sizes_MB)} × avg: {avg_size_MB:0.1f} MB (std: {std_size_MB:0.1f} MB)")
-
-    # plot_sizes_and_params(series)
+    log(f"Size: {summ_MB:0.1f} MB, {len(sizes_MB)} × avg: {avg_size_MB*1024:0.1f} kB (std: {std_size_MB*1024*1024:0.1f} B)")
 
     with open( filename, 'wb') as f:
         pickle.dump( series, f, protocol=pickle.HIGHEST_PROTOCOL)
