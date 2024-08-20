@@ -237,9 +237,9 @@ def lc_task_detect_spike_online(series, length=10, dt_n=0, Block=True):
         dt_s (float): Time threshold for spike detection.
 
     Returns:
-        Timeseries: Detected spikes time series.
+        Timeseries: Detected spikes time series. On time the time of the spike. On data the signed count of the level crossings that led to that detection.
     '''
-    o = Timeseries(series.name + " LC R-peak detection")
+    o = Timeseries(series.name + " LC peak detection")
     o.params.update(series.params)
     data = series.data[1:]
 
@@ -261,7 +261,7 @@ def lc_task_detect_spike_online(series, length=10, dt_n=0, Block=True):
             if count >= length:
                 if not blocked:
                     o_time.append(series.params[TSP_START_S] + sum(np.array(time[:i+1])))
-                    o_data.append(count)
+                    o_data.append(count*np.sign(data[i-1]))
                     count, blocked = 0, Block
                 else:
                     count, blocked = 0, False
@@ -269,8 +269,6 @@ def lc_task_detect_spike_online(series, length=10, dt_n=0, Block=True):
                 count = 0
         elif series_time[i] <= dt_n:
             count += abs(data[i-1])
-
-
 
     PLOT = 0
     if PLOT:
