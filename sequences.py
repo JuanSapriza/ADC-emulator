@@ -79,7 +79,7 @@ class Step()    :
                 count += 1
                 self.count += 1
                 log(f"{self.name}: {count}", end="\r")
-        log(f"\n✅\t{self.name}\tOutput {len(self.outputs)} timeseries.\tTook {self.latency:0.3f} s",f"({self.latency/len(self.outputs):0.3f} s/Ts)." if len(self.outputs) != 0 else "")
+        log(f"\n✅\t{self.name}\tOutput {len(self.outputs)} timeseries.\tTook {self.latency:0.3f} s",f"({self.latency/len(self.outputs):0.3f} s/Ts).\n" if len(self.outputs) != 0 else "\n")
         update_catalog(self.outputs)
         return count
 
