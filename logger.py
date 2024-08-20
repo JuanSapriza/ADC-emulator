@@ -23,8 +23,8 @@ def new_log():
 def log(message, end="\n"):
     global log_buffer
     # Adds to buffer and optionally print to console
-    log_buffer.append(message + end)
-    print(message, end=end)  # Optional: comment this out if no console output needed
+    if "\r" not in end: log_buffer.append(message + end)
+    print(message, end=end)
 
 def dump_log():
     global log_buffer
