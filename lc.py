@@ -390,6 +390,11 @@ def lc_reconstruct_time(series):
     o.data = np.array(o_data, dtype=np.float32)
     return o.copy()
 
+
+
+
+
+
 def lc_rec_zoh_fmin(series):
     '''
     Reconstruct the LC signal through ZOH to the minimal sampling frequency possible.
@@ -413,7 +418,7 @@ def lc_rec_zoh_fmin(series):
     in_time = start_s + np.cumsum( series.time / series.params[TSP_F_HZ] )
     o_time = np.arange(start_s, end_s, t_min_s)
 
-    lvl = 0  # <<<<<<<<<<<<<<< FIX THIS
+    lvl = 0
     lvls = series.params[TSP_LC_LVLS]
     o_data = []
 
@@ -428,9 +433,19 @@ def lc_rec_zoh_fmin(series):
             current_index += 1
         lvl += series.data[i]
 
+    missing = len(o_time) - current_index
+    o_data[-missing:] = o_data[current_index-1]
+
     o.data = np.array(o_data)
     o.time = np.array(o_time)
     return o.copy()
+
+
+
+
+
+
+
 
 def lc_rec_linear_interp(series):
     '''
@@ -484,8 +499,9 @@ def lc_rec_linear_interp(series):
                 t_next = in_time[next_index]
                 lvl_prev = current_lvl
                 lvl_next = current_lvl + series.data[next_index]
+                # print(t_prev, t_next, lvl_prev, lvl_next)
                 # Interpolate levels
-                o_data[j] = lvls[int(np.interp(o_time[j], [t_prev, t_next], [lvl_prev, lvl_next]))]
+                o_data[j] = np.interp(o_time[j], [t_prev, t_next], [lvl_prev, lvl_next])
         else:
             # After the last known point
             o_data[j] = lvls[current_lvl]
@@ -588,6 +604,10 @@ def rec_zoh_fmin(series):
             o_data[current_index] = value
             current_index += 1
         value = series.data[i]
+
+    missing = len(o_time) - current_index
+    o_data[-missing:] = o_data[current_index-1]
+
     o.data = np.array(o_data)
     o.time = np.array(o_time)
     o.params[TSP_F_HZ] = 1/t_min_s
@@ -628,3 +648,74 @@ def rec_linear_fmin(series):
     o.time = np.array(o_time)
     o.params[TSP_F_HZ] = 1/t_min_s
     return o.copy()
+
+
+from scipy.interpolate import interp1d
+
+def rec_piecewise_poly_fmin(series, order=2):
+    '''
+    Reconstruct the LC signal through piecewise polynomial interpolation to the minimal sampling frequency possible.
+    This approach is compatible with both LC-ADC and LC-subsampling.
+
+    Args:
+        series (Timeseries): Input time series, a sparse signal having in data the absolute amplitudes, and in time
+                             the absolute times.
+        order (int): The order of the polynomial used for interpolation between each pair of points.
+
+    Returns:
+        Timeseries: Reconstructed timeseries (at a fixed rate).
+    '''
+    o = Timeseries(series.name + " rec. Piecewise Polynomial Interpolation fmin")
+    o.params.update(series.params)
+
+    if len(series.time) < 2 : return None
+    t_min_s = min(np.diff(series.time))
+    start_s = series.params[TSP_START_S]
+    end_s   = series.params[TSP_END_S]
+
+    o_time = np.arange(start_s, end_s, t_min_s)
+
+    # Setup piecewise polynomial interpolation using interp1d
+    # 'slinear', 'quadratic', 'cubic' or integer specifying the order of the spline interpolation
+    if len(series.time) > order:
+        interpolator = interp1d(series.time, series.data, kind=order, fill_value="extrapolate")
+    else:
+        # If not enough points for the desired order, fall back to linear
+        interpolator = interp1d(series.time, series.data, kind='linear', fill_value="extrapolate")
+
+    o_data = interpolator(o_time)
+
+    o.data = np.array(o_data)
+    o.time = np.array(o_time)
+    o.params[TSP_F_HZ] = 1/t_min_s
+    return o.copy()
+
+
+
+
+def calculate_ser(rec, og):
+    """
+    Calculate the Signal to Error Ratio (SER) between two time series.
+
+    Returns:
+    float: The Signal to Error Ratio.
+    """
+    # Ensure the time series for lpfd is interpolated over the time points of rec
+    interpolator = interp1d(og.time, og.data, kind='linear', bounds_error=False, fill_value='extrapolate')
+    og_interpolated = interpolator(rec.time)
+
+    # Calculate the error signal
+    error_signal = rec.data - og_interpolated
+
+    # Calculate the power of the reference signal and the error signal
+    signal_power = np.mean(np.square(rec.data))
+    error_power = np.mean(np.square(error_signal))
+
+    # Compute SER as the ratio of signal power to error power
+    if error_power == 0:
+        return np.inf  # To handle the case of zero error power
+    ser = signal_power / error_power
+    # Convert SER to decibels
+    ser_db = 10 * np.log10(ser)
+
+    return ser_db
