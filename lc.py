@@ -60,8 +60,8 @@ def lcadc_fraction(series, params ):
             diff -= 1
             timer_samples = 0
             consecutives += 1
-    o.data = np.array(o_data, dtype=np.int16)
-    o.time = np.array(o_time, dtype=np.int16)
+    o.data = np.array(o_data )
+    o.time = np.array(o_time )
     o.params[TSP_LC_ACQ_F_HZ] = len(o.data) / series.params[TSP_LENGTH_S]
     return o.copy()
 
@@ -123,8 +123,8 @@ def lc_subsampler_fraction( series, params ):
         skipped += 1
 
 
-    o.data = np.array(o_data, dtype=np.int16)
-    o.time = np.array(o_time, dtype=np.int16)
+    o.data = np.array( o_data )
+    o.time = np.array( o_time )
     o.params[TSP_LC_ACQ_F_HZ] = len(o.data) / series.params[TSP_LENGTH_S]
     return o.copy()
 
@@ -182,8 +182,8 @@ def lc_subsampler_fraction_half_lsb( series, params ):
         skipped += 1
 
 
-    o.data = np.array(o_data, dtype=np.int16)
-    o.time = np.array(o_time, dtype=np.int16)
+    o.data = np.array(o_data )
+    o.time = np.array(o_time )
     o.params[TSP_LC_ACQ_F_HZ] = len(o.data) / series.params[TSP_LENGTH_S]
     return o.copy()
 
@@ -341,7 +341,7 @@ def lc_reconstruct(series):
     o.params[TSP_TIME_FORMAT] = TIME_FORMAT_ABS_S
     o_time = [ series.params[TSP_START_S]]
     lvl_w = series.params[TSP_LC_LVLS][1]
-    o_data = [series.data[0]*lvl_w]
+    o_data = [0] #[series.data[0]*lvl_w]
 
     try:
         f_Hz = series.params[TSP_TIMER_F_HZ]
@@ -354,6 +354,55 @@ def lc_reconstruct(series):
         else:
             o_time.append(o_time[-1] + ((series.time[i] ) / f_Hz))
             o_data.append( o_data[-1] + series.data[i]*lvl_w )
+
+    o.time = np.array(o_time, dtype=np.float32)
+    o.data = np.array(o_data, dtype=np.float32)
+    return o.copy()
+
+
+def lc_reconstruct_w_inflections(series):
+    '''
+    Reconstructs a LC'd signal.
+
+    Args:
+        series (Timeseries): Input time series.
+        lvls (list): Levels list.
+        start_lvl (int): Starting level.
+
+    Returns:
+        Timeseries: Reconstructed time series.
+    '''
+    o = Timeseries(series.name + " LCrecTime")
+    o.params.update(series.params)
+    o.params[TSP_TIME_FORMAT] = TIME_FORMAT_ABS_S
+    o_time = [ series.params[TSP_START_S]]
+    lvl_w = series.params[TSP_LC_LVLS][1]
+    o_data = [0] #[series.data[0]*lvl_w]
+
+    try:
+        f_Hz = series.params[TSP_TIMER_F_HZ]
+    except:
+        f_Hz = series.params[TSP_F_HZ]
+
+    for i in range(0, len(series.data)):
+        if series.time[i] == 0:
+            o_data[-1] += series.data[i]
+        else:
+            if np.sign(series.data[i]) != np.sign(series.data[i-1]):
+                time = o_time[-1] + ((series.time[i] ) / f_Hz)/2
+                data = o_data[-1] + np.sign(series.data[i-1])*lvl_w/2
+                o_time.append( time )
+                o_data.append( data )
+                time = o_time[-1] + ((series.time[i] ) / f_Hz)/2
+                data = o_data[-2] + series.data[i]*lvl_w
+                o_time.append( time )
+                o_data.append( data )
+
+            else:
+                time = o_time[-1] + ((series.time[i] ) / f_Hz)
+                data = o_data[-1] + series.data[i]*lvl_w
+                o_time.append( time )
+                o_data.append( data )
 
     o.time = np.array(o_time, dtype=np.float32)
     o.data = np.array(o_data, dtype=np.float32)
@@ -669,7 +718,10 @@ def rec_piecewise_poly_fmin(series, order=2):
     o.params.update(series.params)
 
     if len(series.time) < 2 : return None
-    t_min_s = min(np.diff(series.time))
+
+    try: t_min_s = 1/series.params[TSP_F_HZ]
+    except: t_min_s = min(np.diff(series.time))
+
     start_s = series.params[TSP_START_S]
     end_s   = series.params[TSP_END_S]
 
