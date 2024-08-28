@@ -285,6 +285,68 @@ def lc_task_detect_spike_online(series, length=10, dt_n=0, Block=True):
     o.data = np.array(o_data, dtype=np.float32)
     return o.copy()
 
+
+def lc_task_detect_spike_online_2(series, length=10, dt_n=0, Block=True):
+    '''
+    Online spike detection in a level crossing series.
+
+    Args:
+        series (Timeseries): Input time series.
+        start_time_s (float): Start time for detection.
+        length (int): Length of the spike detection window.
+        dt_s (float): Time threshold for spike detection.
+
+    Returns:
+        Timeseries: Detected spikes time series. On time the time of the spike. On data the signed count of the level crossings that led to that detection.
+    '''
+    o = Timeseries(series.name + " LC peak detection")
+    o.params.update(series.params)
+    data = series.data[1:]
+
+    series_time = series.time[1:]
+    f_Hz = series.params[TSP_F_HZ]
+
+    time = (np.array(series.time)) / f_Hz
+
+    count = 0
+    blocked     = False
+    possible    = False
+    short_used  = 0
+
+    o_time = []
+    o_data = []
+    for i in range(length, len(data)):
+        if np.sign(data[i]) != np.sign(data[i-1]) or series_time[i] > dt_n or data[i] == 0:
+            count += abs(data[i-1])
+            if count >= length - (1-short_used):
+                if count == length - (1-short_used): short_used = 1
+                if not blocked:
+                    if possible:
+                        o_time.append(series.params[TSP_START_S] + sum(np.array(time[:i+1])))
+                        o_data.append(count*np.sign(data[i-1]))
+                        count, blocked = 0, Block
+                        possible = False
+                        short_used = 0
+                    else:
+                        possible = True
+                        count = 0
+                else:
+                    count, blocked = 0, False
+                    short_used = 0
+                    possible = False
+
+            else:
+                count = 0
+                possible = False
+                short_used = 0
+        elif series_time[i] <= dt_n:
+            count += abs(data[i-1])
+
+    o.time = np.array(o_time, dtype=np.float32)
+    o.data = np.array(o_data, dtype=np.float32)
+    return o.copy()
+
+
 def lc_aso(series, lvls):
     '''
     Level Crossing Amplitude Slope Operator (ASO).
