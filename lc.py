@@ -28,7 +28,7 @@ def lcadc_fraction(series, params ):
     '''
     lvl_w = (np.abs(series.params[TSP_AMPL_RANGE][1])+np.abs(series.params[TSP_AMPL_RANGE][0])) / params[TSP_LC_LVL_W_FRACT]
     lvls = list(np.arange(series.params[TSP_AMPL_RANGE][0], series.params[TSP_AMPL_RANGE][1], lvl_w))
-    o = Timeseries("LC fraction")
+    o = Timeseries(f"LC ADC (/{params[TSP_LC_LVL_W_FRACT]})")
     o.params.update(series.params)
     o.params[TSP_LC_LVLS]     = lvls
     o.params[TSP_LC_LVL_W_B]      = np.log2(lvl_w)
@@ -92,7 +92,7 @@ def lc_subsampler_fraction( series, params ):
     if sample_b <= fraction_b: return None
     lvl_w_b = sample_b - fraction_b
     lvl_w = int(2**lvl_w_b)
-    o = Timeseries("LC in C from fraction")
+    o = Timeseries(f"LC subs (/{params[TSP_LC_LVL_W_FRACT]})")
     o.params.update(series.params)
     o.params[TSP_LC_LVLS]         = list(range(0, 2**sample_b, lvl_w))
     o.params[TSP_LC_LVL_W_B]      = np.log2(lvl_w)
@@ -438,7 +438,7 @@ def lc_reconstruct_w_inflections(series):
     Returns:
         Timeseries: Reconstructed time series.
     '''
-    o = Timeseries(series.name + " LCrecTime")
+    o = Timeseries(series.name + " LCrecTime+infl")
     o.params.update(series.params)
     o.params[TSP_TIME_FORMAT] = TIME_FORMAT_ABS_S
     o_time = [ series.params[TSP_START_S]]
@@ -780,7 +780,7 @@ def rec_piecewise_poly_fmin(series, order=2):
     Returns:
         Timeseries: Reconstructed timeseries (at a fixed rate).
     '''
-    o = Timeseries(series.name + " rec. Piecewise Polynomial Interpolation fmin")
+    o = Timeseries(series.name + " rec. pw Polyinterp fmin")
     o.params.update(series.params)
 
     if len(series.time) < 2 : return None

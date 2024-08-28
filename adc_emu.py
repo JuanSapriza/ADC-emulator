@@ -121,7 +121,7 @@ class ADC:
         series = self.quantize(series, np.ceil)
         series = self.amplify_output(series)
         # series = self.measEnergy(series)
-        self.conversion = Timeseries("Conversion " + self.name,
+        self.conversion = Timeseries("ADC " + self.name,
                                      data=series.data,
                                      time=series.time)
         self.conversion.params.update(series.params)
