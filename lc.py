@@ -31,6 +31,8 @@ def lcadc_fraction(series, params ):
     o = Timeseries("LC fraction")
     o.params.update(series.params)
     o.params[TSP_LC_LVLS]     = lvls
+    o.params[TSP_LC_LVL_W_B]      = np.log2(lvl_w)
+    o.params[TSP_LC_LVL_W_FRACT]  = params[TSP_LC_LVL_W_FRACT]
     o.params[TSP_START_S]     = series.time[0]
     o.params[TSP_END_S]       = series.time[-1]
     o.params[TSP_TIME_FORMAT] = TIME_FORMAT_DIFF_TM_N
@@ -93,6 +95,8 @@ def lc_subsampler_fraction( series, params ):
     o = Timeseries("LC in C from fraction")
     o.params.update(series.params)
     o.params[TSP_LC_LVLS]         = list(range(0, 2**sample_b, lvl_w))
+    o.params[TSP_LC_LVL_W_B]      = np.log2(lvl_w)
+    o.params[TSP_LC_LVL_W_FRACT]  = params[TSP_LC_LVL_W_FRACT]
     o.params[TSP_START_S]         = series.time[0]
     o.params[TSP_END_S]           = series.time[-1]
     o.params[TSP_TIME_FORMAT]     = TIME_FORMAT_DIFF_FS_N

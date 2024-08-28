@@ -15,6 +15,7 @@ TSP_STEP_HISTORY                    = "Step history"
 TSP_LATENCY_HISTORY                 = "Latency history"
 TSP_SCORE_AIDI                      = "AIDI"
 TSP_SCORE_DR_BPS                    = "Datarate (bps)"
+TSP_SCORE_MSE_DB                    = "Mean Square Error (dB)"
 
 TSP_INPUT_SERIES                    = "Input series"
 TSP_OPERATION                       = "Operation"
