@@ -3,7 +3,7 @@ import sys
 import datetime
 
 
-log_directory   = ''
+log_directory   = None
 filename        = ''
 filepath        = ''
 log_buffer      = ''
@@ -22,9 +22,11 @@ def new_log():
 
 def log(message, end="\n"):
     global log_buffer
-    # Adds to buffer and optionally print to console
-    if "\r" not in end: log_buffer.append(message + end)
-    print(message, end=end)
+    global log_directory
+    if log_directory is not None:
+        # Adds to buffer and optionally print to console
+        if "\r" not in end: log_buffer.append(message + end)
+        print(message, end=end)
 
 def dump_log():
     global log_buffer

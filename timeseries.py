@@ -250,5 +250,6 @@ def load_series(filename):
     with open(filename, "rb") as f:
         series = pickle.load(f)
 
-    update_catalog( series )
+    try: update_catalog( series )
+    except: pass
     return series
