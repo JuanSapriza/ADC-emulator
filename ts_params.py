@@ -17,11 +17,23 @@ TSP_SCORE_AIDI                      = "AIDI"
 TSP_MEAN_AMPL_B                     = "Amplitude of the computation (bits)"
 TSP_MEAN_WIN_N                      = "Window of the moving mean (samples)"
 TSP_T_OFFSET_S                      = "Time offset (s)"
+TSP_F_NYQUIST_HZ                    = "Nyquist frequency (Hz)"
+TSP_TYPE                            = "Signal type"
+TSP_INPUT_LEVEL_DBFS                = "Input Level (dBFS)"
+TSP_OSR                             = "Oversampling Ratio"
 
 TSP_INPUT_SERIES                    = "Input series"
 TSP_OPERATION                       = "Operation"
+TSP_REC_SERIES                      = "Reconstructed Timeseries"
+TSP_SINNED                          = "Configuration through a sine"
 
 TSP_SCORE_DR_BPS                    = "Datarate (bps)"
+TSP_SCORE_AVG_DR_TX_BPS             = "Average Datarate Transmission (bps)"
+TSP_SCORE_AVG_DR_ACQ_BPS            = "Average Datarate Acquisition (bps)"
+TSP_SCORE_MAX_DR_TX_BPS             = "Maximum Datarate Transmission (bps)"
+TSP_SCORE_MAX_DR_ACQ_BPS            = "Maximum Datarate Acquisition (bps)"
+TSP_SCORE_STD_DR_TX_BPS             = "Std Datarate Transmission (bps)"
+TSP_SCORE_STD_DR_ACQ_BPS            = "Std Datarate Acquisition (bps)"
 TSP_SCORE_MSE_DB                    = "Mean Square Error (dB)"
 TSP_SCORE_F1                        = "F-1 Score of task"
 TSP_SCORE_FAR                       = "False-alarm rate Score of task"
@@ -45,6 +57,8 @@ TSP_SCORE_POWER_W                   = "Total power consumption during the task (
 TSP_SCORE_EHRV_S                    = "Error of heart rate variability (s)"
 TSP_SCORE_AVG_VECTOR_ERROR          = "Average error of RQ and RS vectors, neglecting offsets and scaling"
 TSP_SCORE_MISSED_QRS                = "Missed QRS complexes"
+TSP_SCORE_SNDR_DB                   = "SNDR (dB)"
+TSP_SCORE_ENOB                      = "ENOB"
 
 
 TSP_SELECTED_SCORES                 = "Scores selected for total score"
@@ -80,6 +94,8 @@ TSP_DET_R_PEAK_SCORE_FA_RATE_INV    = "R-peak detection score false alarm rate (
 TSP_DISTR_AIDIS_LIST                = "List of evaluated AIDIs"
 TSP_DISTR_AIDIS_MARGIN              = "Margin to discard AIDI"
 
+TSP_CIC_STAGES                      = "Stages of the CIC filter"
+
 TSP_ADC_EPC_J                       = "Energy per conversion (J)"
 
 TSP_LC_LVLS                         = "LC levels"
@@ -94,9 +110,15 @@ TSP_TIMER_F_HZ                      = "LC Timer frequency (Hz)"
 TSP_LC_ACQ_AMP_STRAT                = "LC Acquisition strategy amplitude"
 TSP_LC_ACQ_DIR_STRAT                = "LC Acquisition strategy direction"
 TSP_LC_ACQ_TIME_STRAT               = "LC Acquisition strategy time"
-TSP_LC_ACQ_F_HZ                     = "LC Acquisition ~ frequency (Hz)"
+TSP_LC_AVG_ACQ_F_HZ                 = "LC Acquisition avg frequency (Hz)"
+TSP_LC_STD_ACQ_F_HZ                 = "LC Acquisition std frequency (Hz)"
+TSP_LC_MAX_ACQ_F_HZ                 = "LC Acquisition max frequency (Hz)"
 TSP_LC_REC_TIME                     = "LC Reconstruction (time only)"
 TSP_LC_REC_METHOD                   = "LC reconstruction method"
+TSP_LC_SPIKE_DET_DT_N               = "LC spike detection - time interval (samples)"
+TSP_LC_SPIKE_DET_LENGTH_N           = "LC spike detection - number of crossings"
+TSP_LC_SAMPLE_X_B                   = "LC Bits needed to send level changes (bits)"
+TSP_LC_SAMPLE_T_B                   = "LC Bits needed to send sample skips (bits)"
 
 TSP_AMPL_RANGE                      = "Amplitude range"
 TSP_NOISE_DROP_RATE_DBPDEC          = "Noise drop rate (dB/dec)"
@@ -104,7 +126,7 @@ TSP_NOISE_DC_COMP                   = "DC component (???)"
 
 TSP_INFODATA                        = "Informative data"
 TSP_ANN                             = "Annotations (for informative data)"
-
+TSP_SPIKE_SNIPPETS                  = "Spike snippets"
 
 
 

@@ -138,22 +138,6 @@ def get_output_count_recursive( parent ):
 def operation_buffer( series, params ):
     return series
 
-def filter_timeseries(timeseries_list, params_dict):
-    def matches_params(timeseries, params_dict):
-        for key, value in params_dict.items():
-            if isinstance(value, list):
-                # Check if any of the values in the list match the timeseries params
-                if key not in timeseries.params or not any(item in timeseries.params[key] for item in value):
-                    return False
-            else:
-                # Check if the single value matches the timeseries params
-                if key not in timeseries.params or timeseries.params[key] != value:
-                    return False
-        return True
-
-    filtered_timeseries = [ts for ts in timeseries_list if matches_params(ts, params_dict)]
-    return filtered_timeseries
-
 # def get_child_from_step(series, step):
 #     """
 #     Get a previous series from the current serie's history.

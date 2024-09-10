@@ -64,7 +64,7 @@ def lcadc_fraction(series, params ):
             consecutives += 1
     o.data = np.array(o_data )
     o.time = np.array(o_time )
-    o.params[TSP_LC_ACQ_F_HZ] = len(o.data) / series.params[TSP_LENGTH_S]
+    o.params[TSP_LC_AVG_ACQ_F_HZ] = len(o.data) / series.params[TSP_LENGTH_S]
     return o.copy()
 
 '''```````````````````````````````
@@ -129,7 +129,9 @@ def lc_subsampler_fraction( series, params ):
 
     o.data = np.array( o_data )
     o.time = np.array( o_time )
-    o.params[TSP_LC_ACQ_F_HZ] = len(o.data) / series.params[TSP_LENGTH_S]
+    o.params[TSP_LC_AVG_ACQ_F_HZ] = len(o.data) / series.params[TSP_LENGTH_S]
+    o.params[TSP_LC_MAX_ACQ_F_HZ] = o.params[TSP_F_HZ] / max(min(o.time[1:]),1)
+    o.params[TSP_LC_STD_ACQ_F_HZ] = o.params[TSP_F_HZ] / np.std(o.time[1:])
     return o.copy()
 
 def lc_subsampler_fraction_half_lsb( series, params ):
@@ -188,7 +190,7 @@ def lc_subsampler_fraction_half_lsb( series, params ):
 
     o.data = np.array(o_data )
     o.time = np.array(o_time )
-    o.params[TSP_LC_ACQ_F_HZ] = len(o.data) / series.params[TSP_LENGTH_S]
+    o.params[TSP_LC_AVG_ACQ_F_HZ] = len(o.data) / series.params[TSP_LENGTH_S]
     return o.copy()
 
 '''```````````````````````````````
