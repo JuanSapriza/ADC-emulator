@@ -21,6 +21,9 @@ TSP_F_NYQUIST_HZ                    = "Nyquist frequency (Hz)"
 TSP_TYPE                            = "Signal type"
 TSP_INPUT_LEVEL_DBFS                = "Input Level (dBFS)"
 TSP_OSR                             = "Oversampling Ratio"
+TSP_SCORE_COMPLEXITY                = "Complexity (~power)"
+TSP_SCORE_TRANS_N                   = "Transistor count"
+TSP_COST_BREAKDOWN                  = "Cost (complexity/trans count) breakdwon"
 
 TSP_INPUT_SERIES                    = "Input series"
 TSP_OPERATION                       = "Operation"
@@ -95,6 +98,13 @@ TSP_DISTR_AIDIS_LIST                = "List of evaluated AIDIs"
 TSP_DISTR_AIDIS_MARGIN              = "Margin to discard AIDI"
 
 TSP_CIC_STAGES                      = "Stages of the CIC filter"
+TSP_CIC_RATE_CHANGE                 = "CIC filter rate change"
+TSP_CIC_DIFF_DELAY                  = "CIC filter differential delay"
+TSP_CIC_STAGE_REG_B                 = "Size in bits of each stage's output register"
+TSP_CIC_BOUT_NEEDED                 = "CIC filter needed output number of bits"
+TSP_CIC_BOUT                        = "CIC filter output number of bits"
+TSP_CIC_GAIN                        = "CIC filter gain (wrt normalized input)"
+
 
 TSP_ADC_EPC_J                       = "Energy per conversion (J)"
 
@@ -121,6 +131,7 @@ TSP_LC_SAMPLE_X_B                   = "LC Bits needed to send level changes (bit
 TSP_LC_SAMPLE_T_B                   = "LC Bits needed to send sample skips (bits)"
 
 TSP_AMPL_RANGE                      = "Amplitude range"
+TSP_OG_AMPL_RANGE_V                 = "Amplitude range of the represented signal (V)"
 TSP_NOISE_DROP_RATE_DBPDEC          = "Noise drop rate (dB/dec)"
 TSP_NOISE_DC_COMP                   = "DC component (???)"
 

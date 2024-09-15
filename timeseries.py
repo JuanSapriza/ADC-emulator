@@ -9,6 +9,7 @@ from copy import deepcopy
 import pickle
 import hashlib
 from logger import *
+from scipy.interpolate import interp1d
 
 from ts_params import *
 
@@ -273,6 +274,41 @@ def filter_timeseries(timeseries_list, params_dict):
 
 
 
+def crop_series_time_percentile( series, percentile ):
+    o = Timeseries(f"{series.name} cropped to {percentile}%")
+    o.params.update(series.params)
+
+    length_n    = len(series.time)
+    start_n     = int(length_n*(100-percentile)/200)
+    end_n       = length_n - int(length_n*(100-percentile)/200)
+
+    o.time = series.time[start_n:end_n]
+    o.data = series.data[start_n:end_n]
+    o.params[TSP_LENGTH_S] = o.time[-1] - o.time[0]
+    return o.copy()
+
+def interpolate_series_to_match( series, ref ):
+    o                   = Timeseries(f"{series.name} interpolated to match {ref.name}")
+    o.time              = np.linspace(ref.time[0], ref.time[-1], num=len(ref.time))
+    o.data              = np.array( interp1d(series.time, series.data, bounds_error=False, fill_value="extrapolate")(o.time) )
+    o.params.update(series.params)
+    o.params[TSP_F_HZ]  = ref.params[TSP_F_HZ]
+    return o.copy()
+
+def zero_mean_unit_variance(series):
+    o = Timeseries(f"{series.name} w/0m1v")
+    mean    = np.mean( series.data )
+    std     = np.std( series.data )
+    o.data  = (series.data - mean)/std
+    o.time  = series.time
+    o.params.update(series.params)
+    return o.copy()
+
+def compute_mse( series, ref ):
+    diffs   = np.array(series.data) - np.array(ref.data)
+    mse     = np.mean(diffs ** 2)
+    mse_db = -10 * np.log10(mse)
+    return mse_db
 
 
 

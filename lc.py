@@ -127,6 +127,8 @@ def lc_subsampler_fraction( series, params ):
         skipped += 1
 
 
+    if len(o_time) < 2: return None
+
     o.data = np.array( o_data )
     o.time = np.array( o_time )
     o.params[TSP_LC_AVG_ACQ_F_HZ] = len(o.data) / series.params[TSP_LENGTH_S]
