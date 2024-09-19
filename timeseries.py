@@ -304,11 +304,11 @@ def zero_mean_unit_variance(series):
     o.params.update(series.params)
     return o.copy()
 
-def compute_mse( series, ref ):
+def compute_rmse(series, ref):
     diffs   = np.array(series.data) - np.array(ref.data)
     mse     = np.mean(diffs ** 2)
-    mse_db = -10 * np.log10(mse)
-    return mse_db
-
+    rmse    = np.sqrt(mse)
+    rmse_db = -20 * np.log10(rmse) if rmse != 0 else float('inf')  # Handle rmse == 0 case
+    return rmse_db
 
 

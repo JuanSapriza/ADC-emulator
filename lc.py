@@ -425,8 +425,12 @@ def lc_reconstruct(series):
             o_time.append(o_time[-1] + ((series.time[i] ) / f_Hz))
             o_data.append( o_data[-1] + series.data[i]*lvl_w )
 
-    o.time = np.array(o_time, dtype=np.float32)
-    o.data = np.array(o_data, dtype=np.float32)
+    start=1
+    for ignore_xings,d in enumerate(series.data[start:]):
+        if np.sign(d) != np.sign(series.data[start+ignore_xings-1]): break
+
+    o.time = np.array(o_time[start+ignore_xings:], dtype=np.float32)
+    o.data = np.array(o_data[start+ignore_xings:], dtype=np.float32)
     return o.copy()
 
 

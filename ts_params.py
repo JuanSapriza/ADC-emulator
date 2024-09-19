@@ -28,6 +28,7 @@ TSP_COST_BREAKDOWN                  = "Cost (complexity/trans count) breakdwon"
 TSP_INPUT_SERIES                    = "Input series"
 TSP_OPERATION                       = "Operation"
 TSP_REC_SERIES                      = "Reconstructed Timeseries"
+TSP_DIFF_SERIES                     = "Differentiated Timeseries"
 TSP_SINNED                          = "Configuration through a sine"
 
 TSP_SCORE_DR_BPS                    = "Datarate (bps)"
@@ -103,7 +104,7 @@ TSP_CIC_DIFF_DELAY                  = "CIC filter differential delay"
 TSP_CIC_STAGE_REG_B                 = "Size in bits of each stage's output register"
 TSP_CIC_BOUT_NEEDED                 = "CIC filter needed output number of bits"
 TSP_CIC_BOUT                        = "CIC filter output number of bits"
-TSP_CIC_GAIN                        = "CIC filter gain (wrt normalized input)"
+TSP_FITLER_GAIN                     = "filter gain (wrt normalized input)"
 
 
 TSP_ADC_EPC_J                       = "Energy per conversion (J)"
@@ -138,8 +139,9 @@ TSP_NOISE_DC_COMP                   = "DC component (???)"
 TSP_INFODATA                        = "Informative data"
 TSP_ANN                             = "Annotations (for informative data)"
 TSP_SPIKE_SNIPPETS                  = "Spike snippets"
-
-
+TSP_SPIKE_SNIPPETS_AVG_RMSE         = "Average RMSE of spike snippets"
+TSP_SPIKE_SNIPPETS_MIN_RMSE         = "Minumum RMSE of spike snippets"
+TSP_SPIKE_SNIPPETS_STD_RMSE         = "Std. Deviation of RMSE of spike snippets"
 
 TIME_FORMAT_DIFF_TM_N   = 'Number of timer periods after previous sample'
 TIME_FORMAT_DIFF_FS_N   = 'Number of sampling periods after previous sample'
