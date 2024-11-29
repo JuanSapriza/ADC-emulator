@@ -400,8 +400,6 @@ def lc_reconstruct(series):
 
     Args:
         series (Timeseries): Input time series.
-        lvls (list): Levels list.
-        start_lvl (int): Starting level.
 
     Returns:
         Timeseries: Reconstructed time series.
