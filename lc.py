@@ -843,3 +843,51 @@ def calculate_ser(rec, og):
     ser_db = 10 * np.log10(ser)
 
     return ser_db
+
+
+
+UP      = 1
+NONE    = 0
+DN      = -1
+XING    = 1
+
+class otf_lc_adc:
+    def __init__( self, start_x, lvl_w ):
+        self.start_x    = start_x
+        self.dir        = UP
+        self.lvl_w      = lvl_w
+        self.V_cm       = 2*lvl_w
+        self.lvl_up     = 3*lvl_w
+        self.lvl_dn     = lvl_w
+        self.V_base     = start_x - self.V_cm
+        self.xing       = NONE
+
+    def compare( self, x ):
+
+        # V_base is the value that should be equal to V_cm (ideally) after each Xing
+        # The residue is the difference between the input signal and that level
+        residue = x - self.V_base
+
+        self.xing = NONE
+
+        # If the signal is going UP, then we compare against lvl_up and V_cm
+        if self.dir == UP:
+            if residue > self.lvl_up:
+                # If there is a Xing, then we update the V_base and output the data
+                self.V_base += self.lvl_w
+                self.xing = UP
+            if residue < self.V_cm:
+                # If the signal went under V_cm, we invert the direction
+                self.dir = DN
+
+        # If the signal is going DN, then we compare against lvl_dn and V_cm
+        if self.dir == DN:
+            if residue < self.lvl_dn:
+                # If there is a Xing, then we update the V_base and output the data
+                self.V_base -= self.lvl_w
+                self.xing = DN
+            if residue > self.V_cm:
+                # If the signal went under V_cm, we invert the direction
+                self.dir = UP
+
+        return (self.xing, self.dir)
