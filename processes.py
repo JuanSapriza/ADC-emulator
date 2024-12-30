@@ -4,7 +4,7 @@
 #
 # Author: Juan Sapriza - juan.sapriza@epfl.ch
 
-from scipy.signal import butter, filtfilt
+from scipy.signal import butter, filtfilt, cheby1, bessel, ellip
 from scipy import interpolate
 import numpy as np
 
@@ -315,15 +315,16 @@ def butter_bandpass(lowcut, highcut, fs, order=4):
 
     return b, a
 
-def bpf_butter(series, lowcut, highcut, order=4):
+def bpf_filter(series, lowcut, highcut, order=4, filter_type='butter'):
     """
-    Apply a band-pass Butterworth filter to the input time series.
+    Apply a specified band-pass filter to the input time series.
 
     Args:
         series (Timeseries): Input time series.
         lowcut (float): Lower cutoff frequency for the band-pass filter.
         highcut (float): Upper cutoff frequency for the band-pass filter.
-        order (int, optional): Order of the Butterworth filter. Defaults to 4.
+        order (int, optional): Order of the filter. Defaults to 4.
+        filter_type (str, optional): Type of the filter ('butter' or 'cheby'). Defaults to 'butter'.
 
     Returns:
         Timeseries: Band-pass filtered time series.
@@ -331,14 +332,26 @@ def bpf_butter(series, lowcut, highcut, order=4):
     o = Timeseries(series.name + " BPF")
     o.params.update(series.params)
 
-    # Create Butterworth bandpass filter coefficients
-    b, a = butter_bandpass(lowcut, highcut, series.params[TSP_F_HZ], order=order)
+    fs = series.params[TSP_F_HZ]  # Assume the sampling frequency is stored here
+
+    # Select the filter type based on the input
+    if filter_type == 'butter':
+        b, a = butter(order, [lowcut, highcut], fs=fs, btype='band')
+    elif filter_type == 'cheby':
+        b, a = cheby1(order, 0.5, [lowcut, highcut], fs=fs, btype='band')
+    elif filter_type == 'bessel':
+        b, a = bessel(order, [lowcut, highcut], fs=fs, btype='band', norm='phase')
+    elif filter_type == 'ellip':
+        b, a = ellip(order, 0.5, 40, [lowcut, highcut], fs=fs, btype='band')  # 40 dB stopband attenuation
+    else:
+        raise ValueError("Unsupported filter type. Choose 'butter' or 'cheby'.")
 
     # Apply the filter to the data
     o.data = filtfilt(b, a, series.data)
     o.time = series.time
 
     return o.copy()
+
 
 def add_offset(series, offset):
     """
