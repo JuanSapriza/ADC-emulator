@@ -136,6 +136,7 @@ TSP_AMPL_RANGE                      = "Amplitude range"
 TSP_OG_AMPL_RANGE_V                 = "Amplitude range of the represented signal (V)"
 TSP_NOISE_DROP_RATE_DBPDEC          = "Noise drop rate (dB/dec)"
 TSP_NOISE_DC_COMP                   = "DC component (???)"
+TSP_NOISE_ADDED                     = "Added noise"
 
 TSP_INFODATA                        = "Informative data"
 TSP_ANN                             = "Annotations (for informative data)"

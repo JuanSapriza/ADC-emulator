@@ -538,6 +538,7 @@ def add_noise(series, drop_rate_dBpdec=-3, initial_magnitude=100, line_magnitude
     # Add noise to the original signal
     o.data = series.data + total_noise
 
+    o.params[TSP_NOISE_ADDED] = Timeseries("Added noise", time = o.time, data=total_noise)
     # Set noise parameters
     o.params[TSP_NOISE_DROP_RATE_DBPDEC] = drop_rate_dBpdec
     o.params[TSP_NOISE_DC_COMP] = initial_magnitude
