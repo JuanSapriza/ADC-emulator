@@ -92,7 +92,8 @@ def lc_subsampler_fraction( series, params ):
     if sample_b <= fraction_b: return None
     lvl_w_b = sample_b - fraction_b
     lvl_w = int(2**lvl_w_b)
-    o = Timeseries(f"LC subs (/{params[TSP_LC_LVL_W_FRACT]})")
+    o = Timeseries(f"LC subs")
+    o.params.update(params)
     o.params.update(series.params)
     o.params[TSP_LC_LVLS]         = list(range(0, 2**sample_b, lvl_w))
     o.params[TSP_LC_LVL_W_B]      = np.log2(lvl_w)
@@ -100,6 +101,7 @@ def lc_subsampler_fraction( series, params ):
     o.params[TSP_START_S]         = series.time[0]
     o.params[TSP_END_S]           = series.time[-1]
     o.params[TSP_TIME_FORMAT]     = TIME_FORMAT_DIFF_FS_N
+    o.params[TSP_SIGNED]          = True
 
     current_lvl = 0  # The last level to be crossed.
     dir = 0  # The direction of the crossing (1=up, 0=down). THIS SIGNAL SHOULD BE EXPOSED.
@@ -194,6 +196,9 @@ def lc_subsampler_fraction_half_lsb( series, params ):
     o.time = np.array(o_time )
     o.params[TSP_LC_AVG_ACQ_F_HZ] = len(o.data) / series.params[TSP_LENGTH_S]
     return o.copy()
+
+
+
 
 '''```````````````````````````````
  LC Feature extraction
@@ -390,11 +395,65 @@ def lc_aso(series, lvls):
     return o.copy()
 
 
+
+def lc_formatter( series, twos=True, storage=True ):
+    '''
+    Formats the output of a LC ADC or subsampler to prepare the data for storage.
+
+    Args:
+        series (Timeseries): data - A signed int representing the number of crossed levels, time - the number of samples skipped
+        twos (bool): Whether the amplitude difference should be stored as twos complement or sign+absolute
+        storage (bool): Whether the data should be padded to be stored in multiples of 8-bit
+    Returns:
+        A timeseries with
+        - data: An array of words of width [TSP_LC_ACQ_AMP_B + TSP_LC_ACQ_TIME_B + 1]
+        to be interpreted as <sign><ΔLVL[TSP_LC_ACQ_AMP_B]><skipped_samples[TSP_LC_ACQ_TIME_B]>.
+        ΔLVL is in twos complement (without the sign) if twos=True, else the absolute ΔLVL.
+        - time: Nothing
+    '''
+
+    L_b = int(series.params[TSP_LC_ACQ_AMP_B])
+    T_b = int(series.params[TSP_LC_ACQ_TIME_B])
+
+    data = []
+
+    for t, d in zip(series.time, series.data):
+
+        d = int(d)
+        t = int(t)
+
+        if twos:
+            # Use two's complement for the data, keeping the sign bit intact
+            data_word = (d & ((1 << L_b) - 1)) | (-(d < 0) << L_b)
+        else:
+            # Use absolute value with explicit sign bit
+            data_word = (abs(d) & ((1 << L_b) - 1)) | ((d < 0) << L_b)
+
+        # Combine with the time data
+        result      = (data_word << T_b) | t
+
+        total_bits = L_b + T_b + 1
+        # Calculate the total bits used and pad to nearest multiple of 8
+        padded_bits = ((total_bits + 7) // 8) * 8 if storage else total_bits
+        final_result = result & ((1 << padded_bits) - 1)
+
+        print(f"{d} ({d})\t {t} ({t})\t {final_result} = {format(final_result, f'0{padded_bits}b')}", )
+
+
+        data.append(final_result)
+
+    o = Timeseries("LC data for storage", data=data)
+    o.params[TSP_SAMPLE_B]  = padded_bits
+    o.params[TSP_SIGNED]    = False
+    return o.copy()
+
+
+
 '''```````````````````````````````
  Reconstruct LC signal
 ```````````````````````````````'''
 
-def lc_reconstruct(series):
+def lc_reconstruct(series, ignore_crossings=True):
     '''
     Reconstructs a LC'd signal.
 
@@ -418,14 +477,18 @@ def lc_reconstruct(series):
 
     for i in range(0, len(series.data)):
         if series.time[i] == 0:
-            o_data[-1] += series.data[i]
+            o_data[-1] += series.data[i]*lvl_w
         else:
             o_time.append(o_time[-1] + ((series.time[i] ) / f_Hz))
             o_data.append( o_data[-1] + series.data[i]*lvl_w )
 
-    start=1
-    for ignore_xings,d in enumerate(series.data[start:]):
-        if np.sign(d) != np.sign(series.data[start+ignore_xings-1]): break
+    if ignore_crossings:
+        start=1
+        for ignore_xings,d in enumerate(series.data[start:]):
+            if np.sign(d) != np.sign(series.data[start+ignore_xings-1]): break
+    else:
+        start           = 0
+        ignore_xings    = 0
 
     o.time = np.array(o_time[start+ignore_xings:], dtype=np.float32)
     o.data = np.array(o_data[start+ignore_xings:], dtype=np.float32)
