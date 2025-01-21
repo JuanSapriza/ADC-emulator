@@ -96,7 +96,7 @@ def lc_subsampler_fraction( series, params ):
     o.params.update(params)
     o.params.update(series.params)
     o.params[TSP_LC_LVLS]         = list(range(0, 2**sample_b, lvl_w))
-    o.params[TSP_LC_LVL_W_B]      = np.log2(lvl_w)
+    o.params[TSP_LC_LVL_W_B]      = int(np.log2(lvl_w))
     o.params[TSP_LC_LVL_W_FRACT]  = params[TSP_LC_LVL_W_FRACT]
     o.params[TSP_START_S]         = series.time[0]
     o.params[TSP_END_S]           = series.time[-1]
