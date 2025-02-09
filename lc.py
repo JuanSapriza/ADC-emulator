@@ -109,7 +109,7 @@ def lc_subsampler_fraction( series, params ):
     skipped = 0  # The count of samples that did not cross any level. Reset on every crossing.
 
     MAX_SKIP = 2**params[TSP_LC_ACQ_TIME_B] -1
-    MAX_XING = 2**params[TSP_LC_ACQ_AMP_B] -1
+    MAX_XING = 2**(params[TSP_LC_ACQ_AMP_B]-1) -1 # TSP_LC_ACQ_AMP_B includes the sign, so the max is one less bit
 
     o_data = []
     o_time = []
@@ -447,7 +447,53 @@ def lc_formatter( series, twos=True, storage=True ):
     o.params[TSP_SIGNED]    = False
     return o.copy()
 
+def lc_formatter_alessio( series, params ):
+    '''
+    Formats the output of a LC ADC or subsampler to prepare the data for storage.
 
+    Args:
+        series (Timeseries): data - A signed int representing the number of crossed levels, time - the number of samples skipped
+        params (dictionary): parameters of the formatting
+    Returns:
+        A timeseries with
+        - data: An array of words of width [TSP_LC_ACQ_AMP_B + TSP_LC_ACQ_TIME_B + 1]
+        to be interpreted as <sign><ΔLVL[TSP_LC_ACQ_AMP_B]><skipped_samples[TSP_LC_ACQ_TIME_B]>.
+        ΔLVL is in twos complement (without the sign) if twos=True, else the absolute ΔLVL.
+        - time: Nothing
+    '''
+
+    L_b = int(params[TSP_LC_ACQ_AMP_B])
+    T_b = int(params[TSP_LC_ACQ_TIME_B])
+
+    # How much to displace the time inside the result word
+    shift_T = int(params[TSP_SAMPLE_B] /2)
+
+    data = []
+    print( "DT|DL\tResult\tBinary" )
+    for t, d in zip(series.time, series.data):
+
+        d = int(d)
+        t = int(t)
+
+        print(f"{t}|{d}",end="")
+
+        # Use absolute value with explicit sign bit
+        if not params[TSP_TWOS_COMPLEMENT]:
+            d = abs(d) | ((d < 0) << (L_b-1))
+
+        # Combine with the time data
+        DL      = d & ((1<<L_b) -1)
+        DT      = t & ((1<<T_b) -1)
+        result  = (DT << shift_T) | DL
+
+        print(f"\t{result}=\t{format(result, f'0{params[TSP_SAMPLE_B]}b')}", )
+
+        data.append(result)
+
+    o = Timeseries("LC data for storage", data=data)
+    o.params[TSP_SAMPLE_B]  = params[TSP_SAMPLE_B]
+    o.params[TSP_SIGNED]    = False
+    return o.copy()
 
 '''```````````````````````````````
  Reconstruct LC signal
