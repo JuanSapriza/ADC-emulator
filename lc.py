@@ -447,7 +447,7 @@ def lc_formatter( series, twos=True, storage=True ):
     o.params[TSP_SIGNED]    = False
     return o.copy()
 
-def lc_formatter_alessio( series, params ):
+def lc_formatter_alessio( series, params, verbose = False ):
     '''
     Formats the output of a LC ADC or subsampler to prepare the data for storage.
 
@@ -469,13 +469,13 @@ def lc_formatter_alessio( series, params ):
     shift_T = int(params[TSP_SAMPLE_B] /2)
 
     data = []
-    print( "DT|DL\tResult\tBinary" )
+    if verbose: print( "DT|DL\tResult\tBinary" )
     for t, d in zip(series.time, series.data):
 
         d = int(d)
         t = int(t)
 
-        print(f"{t}|{d}",end="")
+        if verbose: print(f"{t}|{d}",end="")
 
         # Use absolute value with explicit sign bit
         if not params[TSP_TWOS_COMPLEMENT]:
@@ -486,7 +486,7 @@ def lc_formatter_alessio( series, params ):
         DT      = t & ((1<<T_b) -1)
         result  = (DT << shift_T) | DL
 
-        print(f"\t{result}=\t{format(result, f'0{params[TSP_SAMPLE_B]}b')}", )
+        if verbose: print(f"\t{result}=\t{format(result, f'0{params[TSP_SAMPLE_B]}b')}", )
 
         data.append(result)
 

@@ -25,7 +25,7 @@ TSP_SCORE_COMPLEXITY                = "Complexity (~power)"
 TSP_SCORE_TRANS_N                   = "Transistor count"
 TSP_COST_BREAKDOWN                  = "Cost (complexity/trans count) breakdwon"
 TSP_SIGNED                          = "Data is signed"
-TSP_TWOS_COMPLEMENT                 = "Data is represented/treated in twos complement"
+TSP_TWOS_COMPLEMENT                 = "Data in twos complement"
 TSP_FOR_STORAGE                     = "Data is to be stored in memory"
 
 TSP_INPUT_SERIES                    = "Input series"
