@@ -71,7 +71,7 @@ def lcadc_fraction(series, params ):
  LC Subsampler
 ```````````````````````````````'''
 
-def lc_subsampler_fraction( series, params ):
+def lc_subsampler_fraction( series, params, hyst_lsb = 1 ):
     '''
     LC subsampler implementation compatible with C code.
 
@@ -98,6 +98,7 @@ def lc_subsampler_fraction( series, params ):
     o.params[TSP_LC_LVLS]         = list(range(0, 2**sample_b, lvl_w))
     o.params[TSP_LC_LVL_W_B]      = int(np.log2(lvl_w))
     o.params[TSP_LC_LVL_W_FRACT]  = params[TSP_LC_LVL_W_FRACT]
+    o.params[TSP_LC_HYST_LSB]     = hyst_lsb
     o.params[TSP_START_S]         = series.time[0]
     o.params[TSP_END_S]           = series.time[-1]
     o.params[TSP_TIME_FORMAT]     = TIME_FORMAT_DIFF_FS_N
@@ -115,10 +116,18 @@ def lc_subsampler_fraction( series, params ):
     o_time = []
 
     for i in range(len(series.data)):
-        diff    = (series.data[i] - current_lvl)
-        dir     = np.sign(diff)
-        xings   = np.floor(np.abs(diff / lvl_w))
-        current_lvl += xings*lvl_w*dir
+        if hyst_lsb == 1:
+            diff        = (series.data[i] - current_lvl)
+            dir         = np.sign(diff)
+            xings       = np.floor(np.abs(diff / lvl_w))
+            current_lvl += xings*lvl_w*dir
+        elif hyst_lsb == 0:
+            next_lvl    = int(series.data[i]) >> int(o.params[TSP_LC_LVL_W_B])
+            xings       = next_lvl - current_lvl
+            dir         = np.sign(xings)
+            xings       = np.abs(xings)
+            current_lvl = next_lvl
+        else: return None
         while( xings or skipped == MAX_SKIP ):
             data    = min( xings, MAX_XING )
             xings   = max( 0, xings - MAX_XING)
